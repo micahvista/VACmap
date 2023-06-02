@@ -1,0 +1,2 @@
+Specified{DEL:100:200,NML:100:200,INS:100:1000,INV:100:200,DUP:100:200:0:4;number=1}
+Random{eventset=["DEL:100:200","INS:100:1000","INV:100:200","DUP:100:200"];eventcount=[1,5];number=1}
