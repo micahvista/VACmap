@@ -17,28 +17,73 @@ Installation
 Input
 -----
 
-MAMnet takes sorted and indexed alignment files in BAM format as inputs. And MAMnet has been successfully tested on PacBio CLR, PacBio HiFi (CCS) and Oxford Nanopore data and alignment files produced by the read aligners `minimap2 <https://github.com/lh3/minimap2>`_, `pbmm2 <https://github.com/PacificBiosciences/pbmm2/>`_ , `NGMLR <https://github.com/philres/ngmlr>`_, and BWA-MEM.
+VACmap takes long read and reference sequence as inputs. And VACmap has been successfully tested on PacBio CLR, PacBio HiFi (CCS) and Oxford Nanopore data. Unlike other aligners use different parameter setting for different data type, VACmap uses same parameter setting for different data type. But depend on applications, we prodive two fine tune setting for downstream structural variation analyse. -mode H is fine tune for complex structural variation or mixed(both simple and complex structural variation) analyse. -mode L is fine tune for simple structural variation analyse. Comparing to -mode H, -mode L use more stringent settings to discard suspicious alignments. However, these alignments could be correct or misaligned.
 
 Output
 ------
 
-MAMnet produces SV calls in the Variant Call Format (VCF).
+VACmap output alignment file in compressed BAM format.
 
 Usage
 ----------------------
     Index refernece
     ----------------------
+    conda activate VACmap
     python index.py reference_genome_path output_index_path # VACmap uses the implementation in minimap2 to build an index of the reference sequence. 
     
     Mapping long reads
     ----------------------
+    conda activate VACmap
     python mammap.py -ref output_index_path -read /read.fasta -outputdir /outputdir -mode H or L -maxworker number_of_threads
-    #-read The path of long read 
-    #-outputdir The output path of 
-    #-outputpath the output path of called vcf file
-    #-threads the number of threads to use. (default: all available thread)
-    #-step data shift size [1-200]. (default: 50)
-    #-includecontig the list of contig to preform detection. (default: [], all contig are used)
+    #-ref The index file produced by minimap2. The index file can be reuse for different data type. 
+    #-read The path of long read. 
+    #-outputdir The path to store output alignments. 
+    #-maxworker The number of threads to use. 
+    #-mode H best for complex structual variation or mixed (simple and complex structual variation) analyse. L best for simple structual variation analyse.
+    
+    Optinal
+    ----------------------
+    samtools merge -@64 merged.bam /outputdir/*bam
+    samtools sort -@4 merged.bam > merged.sorted.bam
+    samtools index -@64 merged.sorted.bam
+
+
+# VACsim
+VACsim-—a tools to simulate and implant simple and complex structual variation to reference genome.
+
+Input
+-----
+
+VACmap takes long read and reference sequence as inputs. And VACmap has been successfully tested on PacBio CLR, PacBio HiFi (CCS) and Oxford Nanopore data. Unlike other aligners use different parameter setting for different data type, VACmap uses same parameter setting for different data type. But depend on applications, we prodive two fine tune setting for downstream structural variation analyse. -mode H is fine tune for complex structural variation or mixed(both simple and complex structural variation) analyse. -mode L is fine tune for simple structural variation analyse. Comparing to -mode H, -mode L use more stringent settings to discard suspicious alignments. However, these alignments could be correct or misaligned.
+
+Output
+------
+
+VACmap output alignment file in compressed BAM format.
+
+Usage
+----------------------
+    Index refernece
+    ----------------------
+    conda activate VACmap
+    python index.py reference_genome_path output_index_path # VACmap uses the implementation in minimap2 to build an index of the reference sequence. 
+    
+    Mapping long reads
+    ----------------------
+    conda activate VACmap
+    python mammap.py -ref output_index_path -read /read.fasta -outputdir /outputdir -mode H or L -maxworker number_of_threads
+    #-ref The index file produced by minimap2. The index file can be reuse for different data type. 
+    #-read The path of long read. 
+    #-outputdir The path to store output alignments. 
+    #-maxworker The number of threads to use. 
+    #-mode H best for complex structual variation or mixed (simple and complex structual variation) analyse. L best for simple structual variation analyse.
+    
+    Optinal
+    ----------------------
+    samtools merge -@64 merged.bam /outputdir/*bam
+    samtools sort -@4 merged.bam > merged.sorted.bam
+    samtools index -@64 merged.sorted.bam
+
 
 
 Changelog
