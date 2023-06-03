@@ -1,2 +1,6 @@
-Specified{DEL:100:200,NML:100:200,INS:100:1000,INV:100:200,DUP:100:200:0:4;number=1}
-Random{eventset=["DEL:100:200","INS:100:1000","INV:100:200","DUP:100:200"];eventcount=[1,5];number=1}
+Specified{DEL:100:200,INS:100:1000,INV:100:200,DUP:100:200:0:4,TRA:200:400:1;number=2}
+Specified{INV:100:200,INV:100:200,TRA:200:400:1;number=2}
+Specified{INV:100:200,NML:100:200,TRA:200:400:1;number=2}
+Specified{INV:100:200;number=2}
+Random{eventset=["DEL:100:200","INS:100:1000","INV:100:200","DUP:100:200","TRA:200:400"];eventcount=[1,5];number=2}
+Random{eventset=["DEL:100:200,INV:100:200","INS:100:1000,NML:100:200","NML:100:200,INV:100:200","DUP:100:200","TRA:200:400"];eventcount=[4,20];number=2}
