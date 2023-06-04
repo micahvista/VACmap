@@ -70,7 +70,7 @@ VACsim output altered reference sequence.
 
 Usage
 ----------------------
-    Configure the structure variations simulation file
+    Configure the parameterfile
     ----------------------
     #NML: Normal sequence, DEL: Deletion event, INS: Insertion event, INV: Inversion event, DUP: Duplication event, TRA: Traslocation event 
     #Define the composition of complex structural variations. For "DUP:100:200:0:3", DUP refer to duplication events, 100: 200 refer to lower bound (include) and upper bound (exclude) to the size of duplication sequence, 0 refer to this duplication sequence is not inverted (1 for inverted), 3 refer to the duplication sequence is repeated three times.    
@@ -84,21 +84,29 @@ Usage
     Random{eventset=["DEL:100:200","INS:100:1000","INV:100:200","DUP:100:200","TRA:200:400"];eventcount=[1,5];number=2}
     Random{eventset=["DEL:100:200,INV:100:200","INS:100:1000,NML:100:200","NML:100:200,INV:100:200","DUP:100:200","TRA:200:400"];eventcount=[4,20];number=2}
         
-    Mapping long reads
+    Simulating SV
     ----------------------
     conda activate VACmap
-    python mammap.py -ref output_index_path -read /read.fasta -outputdir /outputdir -mode H or L -maxworker number_of_threads
-    #-ref The index file produced by minimap2. The index file can be reuse for different data type. 
-    #-read The path of long read. 
-    #-outputdir The path to store output alignments. 
-    #-maxworker The number of threads to use. 
-    #-mode H best for complex structual variation or mixed (simple and complex structual variation) analyse. L best for simple structual variation analyse.
+    cd VACmap
+    python mamsim.py -parameterfilepath parameterfile -inputgenomepath reference_genome_path -altedgenomepath alted_genome_path -outputvcfpath ouput.vcf
+    #-parameterfilepath The configured the parameter file path. 
+    #-inputgenomepath The path of input genome sequence path. 
+    #-altedgenomepath The output path of alted genome sequence path. 
+    #-outputvcfpath The output path of VCF file. 
+
     
-    Optinal
+    Add SNPs and simulating long read
     ----------------------
-    samtools merge -@64 merged.bam /outputdir/*bam
-    samtools sort -@4 merged.bam > merged.sorted.bam
-    samtools index -@64 merged.sorted.bam
+    git clone https://github.com/fritzsedlazeck/SURVIVOR.git
+    cd SURVIVOR/Debug
+    make
+    cd ..
+    unzip HG002_Pac_error_profile_bwa.txt.zip
+    
+    ~/SURVIVOR/Debug/SURVIVOR simSV alted_genome_path parameter_file 0.001 0 alted_genome_path.snp
+    
+    ~/SURVIVOR/Debug/SURVIVOR simreads alted_genome_path.snp.fasta ~/SURVIVOR/HG002_Pac_error_profile_bwa.txt 40 PAC40x.fasta
+
 
 
 
