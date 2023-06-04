@@ -31,7 +31,14 @@ Usage
     conda activate VACmap
     python index.py reference_genome_path output_index_path # VACmap uses the implementation in minimap2 to build an index of the reference sequence. 
     
-    Mapping long reads
+    OR
+    
+    conda create -n minimap minimap2
+    conda activate minimap
+    minimap2 -d output_index_path reference_genome_path  -w 10 -k 15
+    
+    
+    Map long reads
     ----------------------
     conda activate VACmap
     python mammap.py -ref output_index_path -read /read.fasta -outputdir /outputdir -mode H or L -maxworker number_of_threads
@@ -41,7 +48,7 @@ Usage
     #-maxworker The number of threads to use. 
     #-mode H best for complex structual variation or mixed (simple and complex structual variation) analyse. L best for simple structual variation analyse.
     
-    Optinal
+    Merge and sort BAM file
     ----------------------
     samtools merge -@64 merged.bam /outputdir/*bam
     samtools sort -@4 merged.bam > merged.sorted.bam
@@ -54,20 +61,29 @@ VACsim-—a tools to simulate and implant simple and complex structual variation
 Input
 -----
 
-VACmap takes long read and reference sequence as inputs. And VACmap has been successfully tested on PacBio CLR, PacBio HiFi (CCS) and Oxford Nanopore data. Unlike other aligners use different parameter setting for different data type, VACmap uses same parameter setting for different data type. But depend on applications, we prodive two fine tune setting for downstream structural variation analyse. -mode H is fine tune for complex structural variation or mixed(both simple and complex structural variation) analyse. -mode L is fine tune for simple structural variation analyse. Comparing to -mode H, -mode L use more stringent settings to discard suspicious alignments. However, these alignments could be correct or misaligned.
+VACsim takes a configuration file used to generate simulated structual variation and a reference sequence as inputs. And VACsim allow user to specify or randomly create the type of complex structural variation.
 
 Output
 ------
 
-VACmap output alignment file in compressed BAM format.
+VACsim output altered reference sequence.
 
 Usage
 ----------------------
-    Index refernece
+    Configure the structure variations simulation file
     ----------------------
-    conda activate VACmap
-    python index.py reference_genome_path output_index_path # VACmap uses the implementation in minimap2 to build an index of the reference sequence. 
-    
+    #NML: Normal sequence, DEL: Deletion event, INS: Insertion event, INV: Inversion event, DUP: Duplication event, TRA: Traslocation event 
+    #Define the composition of complex structural variations. For "DUP:100:200:0:3", DUP refer to duplication events, 100: 200 refer to lower bound (include) and upper bound (exclude) to the size of duplication sequence, 0 refer to this duplication sequence is not inverted (1 for inverted), 3 refer to the duplication sequence is repeated three times.    
+    #number: The number of simulated structural variations.
+    Specified{DEL:100:200,INS:100:1000,INV:100:200,DUP:100:200:0:3,TRA:200:400:1;number=2}
+    Specified{INV:100:200,INV:100:200,TRA:200:400:1;number=2}
+    Specified{INV:100:200,NML:100:200,TRA:200:400:1;number=2}
+    Specified{INV:100:200;number=2}
+    #eventcount=[1(include),5(exclude)] VACsim will randomly choose a number as the event count of simluated structural variation.
+    #eventset VACsim will randomly choose eventcount times to determine the composition of structural variations. Important: If you provide a nest event (e.g. "DEL:100:200,INV:100:200") the final eventcount may exceed defined eventcount. User can identify the true eventcount in output VCF using bp annotation.
+    Random{eventset=["DEL:100:200","INS:100:1000","INV:100:200","DUP:100:200","TRA:200:400"];eventcount=[1,5];number=2}
+    Random{eventset=["DEL:100:200,INV:100:200","INS:100:1000,NML:100:200","NML:100:200,INV:100:200","DUP:100:200","TRA:200:400"];eventcount=[4,20];number=2}
+        
     Mapping long reads
     ----------------------
     conda activate VACmap
