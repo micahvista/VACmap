@@ -78,7 +78,7 @@ if('mode' not in pdict):
     print('mode is required.')
     hit = True
 else:
-    if(pdict['mode'] not in ('H', 'L')):
+    if(pdict['mode'] not in ('H', 'L', 'S')):
         print('Invaild mode '+ pdict['mode'])
         hit = True
 if('maxworker' not in pdict):
@@ -93,11 +93,14 @@ if(hit == True):
     print('\t\tStricter parameter setting. Ideal for simple SV analyse.')
 
 else:
-
+    H = False
     if(pdict['mode'] == 'H'):
-        import mammap_H as mammap
-    else:
-        import mammap_L as mammap
+        import mammap_clrnano as mammap
+    elif(pdict['mode'] == 'L'):
+        import mammap_ccs as mammap
+    elif(pdict['mode'] == 'S'):
+        H = True 
+        import mammap_ccs as mammap
 
 
     refpath = pdict['ref']
@@ -130,7 +133,7 @@ else:
     setting_kmersize = 9
     readid = 'hhk'
     st = time.time()
-    onemapinfolist, (alignment_list,raw_alignment_list), one_mapinfo = mammap.get_readmap_DP_test(readid, str(Seq(testseq).reverse_complement()),  contig2start, contig2seq, minimap, index2contig, hastra = True, refine = True, debug = False)    
+    onemapinfolist, (alignment_list,raw_alignment_list), one_mapinfo = mammap.get_readmap_DP_test(readid, str(Seq(testseq).reverse_complement()),  contig2start, contig2seq, minimap, index2contig, hastra = True, refine = True, debug = False, H = H)    
 
 
 
@@ -142,7 +145,7 @@ else:
     for count in range(1, n+1):
         savepath = prefix+str(count)
         print(savepath)
-        multiprocessing.Process(target=mammap.get_list_of_readmap, args=(raw_queue, savepath,  minimap, contig2seq, True,)).start()
+        multiprocessing.Process(target=mammap.get_list_of_readmap, args=(raw_queue, savepath,  minimap, contig2seq, True, H)).start()
     st = time.time()
     count = 0
     unique_set = set()
