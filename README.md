@@ -1,5 +1,5 @@
 # VACmap
-VACmap-—an advanced long-read mapping method explicitly tailored for accurately mapping complex structural variations.
+VACmap-—an advanced long-read aligner specifically designed for complex structural variation discovery.
 
 
 Installation
@@ -17,12 +17,12 @@ Installation
 Input
 -----
 
-VACmap takes long read and reference sequence as inputs. And VACmap has been successfully tested on PacBio CLR, PacBio HiFi (CCS) and Oxford Nanopore data. Unlike other aligners use different parameter setting for different data type, VACmap uses same parameter setting for different data type. But depend on applications, we prodive two fine tune setting for downstream structural variation analyse. -mode H is fine tune for complex structural variation or mixed(both simple and complex structural variation) analyse. -mode L is fine tune for simple structural variation analyse. Comparing to -mode H, -mode L use more stringent settings to discard suspicious alignments. However, these alignments could be correct or misaligned.
+VACmap takes long reads and reference sequences as inputs. 
 
 Output
 ------
 
-VACmap output alignment file in compressed BAM format.
+VACmap outputs alignment files in compressed BAM format.
 
 Usage
 ----------------------
@@ -41,12 +41,12 @@ Usage
     Map long reads
     ----------------------
     conda activate VACmap
-    python mammap.py -ref output_index_path -read /read.fasta -outputdir /outputdir -mode H or L -maxworker number_of_threads
-    #-ref The index file produced by minimap2. The index file can be reuse for different data type. 
-    #-read The path of long read. 
+    python mammap.py -ref output_index_path -read /read.fasta -outputdir /outputdir -mode S or H or L -maxworker number_of_threads
+    #-ref The index file produced by minimap2. 
+    #-read The path of long reads. 
     #-outputdir The path to store output alignments. 
     #-maxworker The number of threads to use. 
-    #-mode H best for complex structual variation or mixed (simple and complex structual variation) analyse. L best for simple structual variation analyse.
+    #-mode H For aligning high error rate long read (Pacbio CLR, ONT). L For aligning low error rate long read (Pacbio CCS). S Better sensitivity for complex structural variation discovery.
     
     Merge and sort BAM file
     ----------------------
@@ -56,12 +56,12 @@ Usage
 
 
 # VACsim
-VACsim-—a tools to simulate and implant simple and complex structual variation to reference genome.
+VACsim-—a tool to simulate and implant simple and complex structural variation to reference genome.
 
 Input
 -----
 
-VACsim takes a configuration file used to generate simulated structual variation and a reference sequence as inputs. And VACsim allow user to specify or randomly create the type of complex structural variation.
+VACsim takes a configuration file used to generate simulated structural variation and a reference sequence as inputs. And VACsim allows user to specify or randomly create the type of complex structural variation.
 
 Output
 ------
@@ -72,15 +72,15 @@ Usage
 ----------------------
     Configure the parameterfile
     ----------------------
-    #NML: Normal sequence, DEL: Deletion event, INS: Insertion event, INV: Inversion event, DUP: Duplication event, TRA: Traslocation event 
-    #Define the composition of complex structural variations. For "DUP:100:200:0:3", DUP refer to duplication events, 100: 200 refer to lower bound (include) and upper bound (exclude) to the size of duplication sequence, 0 refer to this duplication sequence is not inverted (1 for inverted), 3 refer to the duplication sequence is repeated three times.    
+    #NML: Normal sequence, DEL: Deletion event, INS: Insertion event, INV: Inversion event, DUP: Duplication event, TRA: Translocation event 
+    #Define the composition of complex structural variations. For "DUP:100:200:0:3", DUP refers to duplication events, 100: 200 refers to the lower bound (include) and upper bound (exclude) to the size of the duplication sequence, 0 refers to this duplication sequence is not inverted (1 for inverted), 3 refer to the duplication sequence is repeated three times.    
     #number: The number of simulated structural variations.
     Specified{DEL:100:200,INS:100:1000,INV:100:200,DUP:100:200:0:3,TRA:200:400:1;number=2}
     Specified{INV:100:200,INV:100:200,TRA:200:400:1;number=2}
     Specified{INV:100:200,NML:100:200,TRA:200:400:1;number=2}
     Specified{INV:100:200;number=2}
-    #eventcount=[1(include),5(exclude)] VACsim will randomly choose a number as the event count of simluated structural variation.
-    #eventset VACsim will randomly choose eventcount times to determine the composition of structural variations. Important: If you provide a nest event (e.g. "DEL:100:200,INV:100:200") the final eventcount may exceed defined eventcount. User can identify the true eventcount in output VCF using bp annotation.
+    #eventcount=[1(include),5(exclude)] VACsim will randomly choose a number as the event count of simulated structural variation.
+    #eventset VACsim will randomly choose event count times to determine the composition of structural variations. Important: If you provide a nested event (e.g. "DEL:100:200,INV:100:200") the final event count may exceed defined eventcount. Users can identify the true event count in output VCF using 'bp' annotation.
     Random{eventset=["DEL:100:200","INS:100:1000","INV:100:200","DUP:100:200","TRA:200:400"];eventcount=[1,5];number=2}
     Random{eventset=["DEL:100:200,INV:100:200","INS:100:1000,NML:100:200","NML:100:200,INV:100:200","DUP:100:200","TRA:200:400"];eventcount=[4,20];number=2}
         
@@ -89,13 +89,13 @@ Usage
     conda activate VACmap
     cd VACmap
     python mamsim.py -parameterfilepath parameterfile -inputgenomepath reference_genome_path -altedgenomepath alted_genome_path -outputvcfpath ouput.vcf
-    #-parameterfilepath The configured the parameter file path. 
+    #-parameterfilepath The configured parameter file path. 
     #-inputgenomepath The path of input genome sequence path. 
-    #-altedgenomepath The output path of alted genome sequence path. 
+    #-altedgenomepath The output path of altered genome sequence path. 
     #-outputvcfpath The output path of VCF file. 
 
     
-    Add SNPs and simulating long read
+    Add SNPs and simulate long read
     ----------------------
     git clone https://github.com/fritzsedlazeck/SURVIVOR.git
     cd SURVIVOR/Debug
