@@ -26,7 +26,7 @@ VACmap outputs alignment files in compressed BAM format.
 
 Usage
 ----------------------
-    Index refernece
+    Index reference
     ----------------------
     conda activate VACmap
     python index.py reference_genome_path output_index_path # VACmap uses the implementation in minimap2 to build an index of the reference sequence. 
@@ -46,7 +46,9 @@ Usage
     #-read The path of long reads. 
     #-outputdir The path to store output alignments. 
     #-maxworker The number of threads to use. 
-    #-mode H For aligning high error rate long read (Pacbio CLR, ONT). L For aligning low error rate long read (Pacbio CCS). S Better sensitivity for complex structural variation discovery.
+    #-mode H For aligning high error rate long read (Pacbio CLR, ONT). 
+    #-mode L For aligning low error rate long read (Pacbio CCS). 
+    #-mode S Better sensitivity for complex structural variation discovery.
     
     Merge and sort BAM file
     ----------------------
@@ -80,7 +82,7 @@ Usage
     Specified{INV:100:200,NML:100:200,TRA:200:400:1;number=2}
     Specified{INV:100:200;number=2}
     #eventcount=[1(include),5(exclude)] VACsim will randomly choose a number as the event count of simulated structural variation.
-    #eventset VACsim will randomly choose event count times to determine the composition of structural variations. Important: If you provide a nested event (e.g. "DEL:100:200,INV:100:200") the final event count may exceed defined eventcount. Users can identify the true event count in output VCF using 'bp' annotation.
+    #eventset VACsim will randomly choose event count times to determine the composition of structural variations. 
     Random{eventset=["DEL:100:200","INS:100:1000","INV:100:200","DUP:100:200","TRA:200:400"];eventcount=[1,5];number=2}
     Random{eventset=["DEL:100:200,INV:100:200","INS:100:1000,NML:100:200","NML:100:200,INV:100:200","DUP:100:200","TRA:200:400"];eventcount=[4,20];number=2}
         
