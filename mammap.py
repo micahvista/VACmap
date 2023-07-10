@@ -86,11 +86,13 @@ if('maxworker' not in pdict):
     hit = True
 if(hit == True):
     print('Usage')
-    print('python mammap.py -ref /ref.mmi -read /read.fasta -outputdir /outputdir -mode H or L -maxworker number of threads')
+    print('python mammap.py -ref /ref.mmi -read /read.fasta -outputdir /outputdir -mode S or H or L -maxworker number of threads')
     print('\t-mode H ')
-    print('\t\tLooser parameter setting, keep more lower quality but possibly varaition alignment. Ideal for complex SV or mixed (simple and complex SV) analyse.')
+    print('\t\tFor aligning high error rate long read.(Pacbio CLR, ONT)')
     print('\t-mode L')
-    print('\t\tStricter parameter setting. Ideal for simple SV analyse.')
+    print('\t\tFor aligning low error rate long read.(Pacbio CCS)')
+    print('\t-mode S')
+    print('\t\tBest for complex structural variation discoverary')
 
 else:
     H = False
