@@ -192,7 +192,7 @@ def random_create_sim_sv_info_list(eventlist = ['DEL', 'INS', 'INV', 'DUP'], siz
     sim_sv_info_list = []
     lenstring = ':'+str(sizerange[0])+':'+str(sizerange[1])
     for line in range(svcount):
-        eventcount = np.random.randint(1, max(eventmaxcount, 1) + 1)
+        eventcount = np.random.randint(1, max(eventmaxcount, 2))
         simulatedevent = 0
         svstyle = ''
         while(simulatedevent < eventcount):
@@ -201,7 +201,8 @@ def random_create_sim_sv_info_list(eventlist = ['DEL', 'INS', 'INV', 'DUP'], siz
                 svstyle += simevent + lenstring + ','
                 simulatedevent += 1
             elif(simevent == 'DUP'):
-                repeat = np.random.randint(1, eventcount - simulatedevent + 1)
+                repeat = 1
+                #repeat = np.random.randint(1, eventcount - simulatedevent + 1)
                 simulatedevent += repeat
                 svstyle += simevent+lenstring+':0:'+str(repeat)+','
             elif(simevent == 'TRA'):
@@ -311,13 +312,14 @@ def tovcf(svlist, contig2length, outputpath):
         f.write(myvcf)
         
 def random_create_sim_sv_info_list(eventlist = ['DEL:100:200,NML:100:200', 'INS:100:200', 'INV:100:200', 'DUP:200:300', 'TRA:200:300,NML:100:200'], eventcountrange = [1, 20], svcount = 20000):
-    sim_sv_info_list = []
-    
+    sim_sv_info_list = [] 
+    allowset = set(('INS', 'DUP'))
     for line in range(svcount):
         eventcount = np.random.randint(max(eventcountrange[0], 1), max(eventcountrange[1], 1))
         simulatedevent = 0
         svstyle = ''
         simevent = ''
+        simSVevent = ''
         while(simulatedevent < eventcount):
             count = 0
             while(True):
@@ -330,6 +332,16 @@ def random_create_sim_sv_info_list(eventlist = ['DEL:100:200,NML:100:200', 'INS:
                     simeventlist.pop(-1)
                 if(simeventlist.split(',')[-1].split(':')[0] == simevent and simevent in ('DEL', 'INS')):
                     continue
+                if(simSVevent in ('DEL', 'INS', 'DUP')):
+                    if(simevent == 'NML'):
+                        if(set((simeventlist.split(',')[0].split(':')[0], simSVevent)) != allowset and simeventlist.split(',')[0].split(':')[0] in ('DEL', 'INS', 'DUP')):
+                            if(simeventlist.split(',')[0].split(':')[0] != simSVevent):
+                                continue
+                    elif(simeventlist.split(',')[0].split(':')[0] == 'NML'):
+                        if(len(simeventlist.split(',')) > 1 and simeventlist.split(',')[1] != ''):
+                            if(set((simeventlist.split(',')[0].split(':')[0], simSVevent)) != allowset and simeventlist.split(',')[1].split(':')[0] in ('DEL', 'INS', 'DUP')):
+                                if(simeventlist.split(',')[1].split(':')[0] != simSVevent):
+                                    continue 
                 break
             for simeventinfo in simeventlist.split(','):
                 if(simeventinfo == ''):
@@ -338,16 +350,18 @@ def random_create_sim_sv_info_list(eventlist = ['DEL:100:200,NML:100:200', 'INS:
                 lenstring = ':'+sizestart+':'+sizeend
                 if(simevent in ('DEL', 'INS', 'INV', 'NML')):
                     svstyle += simevent + lenstring + ','
-                    simulatedevent += 1
                 elif(simevent == 'DUP'):
-                    repeat = np.random.randint(1, eventcount - simulatedevent + 1)
+                    repeat = 1
+                    #repeat = np.random.randint(1, eventcount - simulatedevent + 1)
                     simulatedevent += repeat
                     svstyle += simevent+lenstring+':0:'+str(repeat)+','
                 elif(simevent == 'TRA'):
                     simulatedevent += 1
                     reverse = str(np.random.randint(0, 2))
                     svstyle += simevent + lenstring +':'+ reverse  + ','
-                
+                if(simevent != 'NML'):
+                    simSVevent = simevent
+                    simulatedevent += 1
         sim_sv_info_list.append(svstyle+'1')
     return sim_sv_info_list
 def decode_parameterfile(s):
@@ -380,16 +394,16 @@ def decode_parameterfile(s):
     decoded_sim_sv_info_list.sort(key = getfirst_python)
     decoded_sim_sv_info_list = decoded_sim_sv_info_list[::-1]
     return decoded_sim_sv_info_list
-def insertSVandoutput(parameterfilepath, inputgenomepath, altedgenomepath, outputvcfpath):
+def insertSVandoutput(parameterfilepath, inputgenomepath, altedgenomepath, outputvcfpath, heterozygous_ratio):
     with open(parameterfilepath, 'r') as file:
         parameter_file = file.read()
     decoded_sim_sv_info_list = decode_parameterfile(parameter_file)
     print('Loading genome to memory')
     sim_contig2seq = dict()
     for rec in mp.fastx_read(inputgenomepath):
-        if(rec[0] not in ('chr1', 'chr2')):
+        #if(rec[0] not in ('chr21', 'chr22')):
             #continue
-            break
+            #break
         sim_contig2seq[rec[0]] = rec[1].upper()
     print('Loading genome to memory completed')
     print('Checking N in genome')
@@ -398,6 +412,7 @@ def insertSVandoutput(parameterfilepath, inputgenomepath, altedgenomepath, outpu
     unique_id = 1
     contig2op_list = dict()
     print('Trying to insert variations')
+    hetdict = dict()
     for decoded_info in decoded_sim_sv_info_list: 
         svend_1, svend_2, onesvinfo = decoded_info
         pass_flag, contig_1, refstart_1, contig_2, refstart_2 = get_start_loc(svend_1, svend_2, contig_list, contigprob_list, contig2usable_interval)
@@ -407,6 +422,10 @@ def insertSVandoutput(parameterfilepath, inputgenomepath, altedgenomepath, outpu
         eventcount = count_event(decoded_info)
         for oneinfo in onesvinfo:
             #print(oneinfo)
+            if(np.random.randint(100) > (heterozygous_ratio*100)):
+                hetdict[unique_id] = False
+            else:
+                hetdict[unique_id] = True
             for oneop in add_SV(contig_1, contig_2, refstart_1, refstart_2, oneinfo, sim_contig2seq, unique_id):
                 oneop[-1].append(eventcount)
                 oneop[-1].append(unique_id)
@@ -422,14 +441,28 @@ def insertSVandoutput(parameterfilepath, inputgenomepath, altedgenomepath, outpu
     for contig in contig2op_list:
         contig2op_list[contig].sort(key = getsecond_python)
         l = []
+        l1 = []
         prestart = 0
         for item in contig2op_list[contig]:
+        
             l.append(sim_contig2seq[contig][prestart: item[1]])
+            l1.append(sim_contig2seq[contig][prestart: item[1]])
+        
+            
             l.append(item[3])
+            unique_id = item[-1][-1]
+            if(hetdict[unique_id] == False):
+                l1.append(item[3])
+            else:
+                l1.append(sim_contig2seq[contig][item[1]: item[2]])
+            
+        
             prestart = item[2]
             vcflist.append(item[-1])
         l.append(sim_contig2seq[contig][prestart: ])
-        modifed_contig_dict[contig] = ''.join(l)
+        l1.append(sim_contig2seq[contig][prestart: ])
+        modifed_contig_dict[contig+'_hap1'] = ''.join(l)
+        modifed_contig_dict[contig+'_hap2'] = ''.join(l1)
     print('Insert variations completed')
     print('writing alted genome to '+ altedgenomepath)
     ofile = open(altedgenomepath, "w")
@@ -464,7 +497,7 @@ pdict = {}
 for item in pstring[1:]:
     if(forvaule == True):
         forvaule = False
-        if(op in ('parameterfilepath', 'inputgenomepath', 'altedgenomepath', 'outputvcfpath')):
+        if(op in ('parameterfilepath', 'inputgenomepath', 'altedgenomepath', 'outputvcfpath', 'heterozygous_ratio')):
             pdict[op] = item
         
     if('-' == item[:1]):
@@ -476,9 +509,14 @@ try:
     inputgenomepath = pdict['inputgenomepath']
     altedgenomepath = pdict['altedgenomepath']
     outputvcfpath = pdict['outputvcfpath']
+    heterozygous_ratio = float(pdict['heterozygous_ratio'])
     hit = True
 except:
-    print('Usage')
-    print('python mamsim.py -parameterfilepath parameterfilepath -inputgenomepath inputgenomepath -altedgenomepath altedgenomepath -outputvcfpath outputvcfpath')
+    pass
+    
 if(hit == True):
-    insertSVandoutput(parameterfilepath, inputgenomepath, altedgenomepath, outputvcfpath)
+    insertSVandoutput(parameterfilepath, inputgenomepath, altedgenomepath, outputvcfpath, heterozygous_ratio)
+else:
+    print('Usage')
+    print('python mamsim.py -parameterfilepath parameterfilepath -inputgenomepath inputgenomepath -altedgenomepath altedgenomepath -outputvcfpath outputvcfpath -heterozygous_ratio 0.8')
+    
