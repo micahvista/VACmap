@@ -5,13 +5,10 @@ VACmap-—an advanced long-read aligner specifically designed for complex struct
 Installation
 ------------
 
-    #Install from github (requires Python 3.6.* or newer)
     git clone https://github.com/micahvista/VACmap.git
     cd VACmap
-    conda create -n VACmap heapdict edlib pandas pysam numba biopython matplotlib cigar psutil samtools
-    conda activate VACmap
-    pip install setuptools==57
-    cd index
+    conda env create --name vacmap_env --file VACmap_environment.yml
+    conda activate vacmap_env
     python setup.py install
 
 Input
