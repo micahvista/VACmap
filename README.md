@@ -1,5 +1,5 @@
 # VACmap
-VACmap-—an advanced long-read aligner specifically designed for complex structural variation discovery.
+VACmap-—a long-read aligner specifically designed for complex structural variation discovery.
 
 
 Installation
