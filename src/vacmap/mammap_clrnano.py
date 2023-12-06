@@ -1,3 +1,9 @@
+'''   
+ * @Title: MAMnet 
+ * @author: Ding Hongyu
+ * @date: 12 6 2023
+ * @version V1.0.0
+'''
 import edlib
 
 import pandas as pd
