@@ -92,6 +92,20 @@ else:
 if('maxworker' not in pdict):
     print('maxworker is required.')
     hit = True
+refpath = pdict['ref']
+if((os.path.isfile(refpath+"_w10_k15.mmi") == False)):
+    if(('mmi' != refpath[-3:])):
+        print("Using minimap2 to build reference index")
+        print()
+        import subprocess
+        subprocess.run(["minimap2", "-d", refpath+"_w10_k15.mmi", refpath, "-w", "10", "-k", "15"]) 
+        refpath = refpath+"_w10_k15.mmi"
+        if(os.path.isfile(refpath) == False):
+            print("Failed to build reference index")
+            hit = True
+else:
+    refpath = refpath+"_w10_k15.mmi"
+pdict['ref'] = refpath
 
 if(hit == True):
     print('Usage')
@@ -115,16 +129,13 @@ else:
 
 
     refpath = pdict['ref']
-    if(('mmi' != refpath[-3:]) and (os.path.isfile(refpath+"_w10_k15.mmi") == False)):
-        subprocess.run(["minimap2", "-d", refpath+"_w10_k15.mmi", refpath, "-w", "10", "-k", "15"]) 
-        refpath = refpath+"_w10_k15.mmi"
     prefix = pdict['outputdir']
     readpath = pdict['read']
     max_worker = pdict['maxworker']
 
-    index_object = mp.Aligner(refpath, k = 15, w = 10)  # load or build index
+    index_object = mp.Aligner(refpath, k = 15, w = 10)  # load index
 
-    if not index_object: raise Exception("ERROR: failed to load/build index")
+    if not index_object: raise Exception("ERROR: failed to load index")
     contig2start = Dict()
     contig2seq = Dict()
     index2contig = List()
