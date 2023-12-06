@@ -25,11 +25,7 @@ Usage
 ----------------------
     Index reference
     ----------------------
-    conda activate VACmap
-    python index.py reference_genome_path output_index_path # VACmap uses the implementation in minimap2 to build an index of the reference sequence. 
-    
-    OR
-    
+
     conda create -n minimap minimap2
     conda activate minimap
     minimap2 -d output_index_path reference_genome_path  -w 10 -k 15
@@ -37,21 +33,20 @@ Usage
     
     Map long reads
     ----------------------
-    conda activate VACmap
-    python mammap.py -ref output_index_path -read /read.fasta -outputdir /outputdir -mode S or H or L -maxworker number_of_threads
+    conda activate vacmap_env
+    vacmap -ref output_index_path -read /read.fasta -outputdir /outputdir -mode H or L -maxworker number_of_threads
     #-ref The index file produced by minimap2. 
     #-read The path of long reads. 
     #-outputdir The path to store output alignments. 
     #-maxworker The number of threads to use. 
     #-mode H For aligning high error rate long read (Pacbio CLR, ONT). 
     #-mode L For aligning low error rate long read (Pacbio CCS). 
-    #-mode S Better sensitivity for complex structural variation discovery.
     
     Merge and sort BAM file
     ----------------------
-    samtools merge -@64 merged.bam /outputdir/*bam
+    samtools merge -@8 merged.bam /outputdir/*bam
     samtools sort -@4 merged.bam > merged.sorted.bam
-    samtools index -@64 merged.sorted.bam
+    samtools index -@8 merged.sorted.bam
 
 
 # VACsim
