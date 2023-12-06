@@ -22,14 +22,7 @@ Output
 VACmap outputs alignment files in compressed BAM format.
 
 Usage
-----------------------
-    Index reference
-    ----------------------
-
-    conda create -n minimap minimap2
-    conda activate minimap
-    minimap2 -d output_index_path reference_genome_path  -w 10 -k 15
-    
+----------------------    
     
     Map long reads
     ----------------------
