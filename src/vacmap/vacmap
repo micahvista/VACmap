@@ -115,6 +115,9 @@ else:
 
 
     refpath = pdict['ref']
+    if(('mmi' != refpath[-3:]) and (os.path.isfile(refpath+"_w10_k15.mmi") == False)):
+        subprocess.run(["minimap2", "-d", refpath+"_w10_k15.mmi", refpath, "-w", "10", "-k", "15"]) 
+        refpath = refpath+"_w10_k15.mmi"
     prefix = pdict['outputdir']
     readpath = pdict['read']
     max_worker = pdict['maxworker']
