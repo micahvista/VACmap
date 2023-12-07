@@ -109,7 +109,7 @@ pdict['ref'] = refpath
 
 if(hit == True):
     print('Usage')
-    print('python mammap.py -ref /ref.mmi -read /read.fasta -outputdir /outputdir -mode S or H or L -maxworker number of threads')
+    print('python mammap.py -ref /ref.fasta -read /read.fasta -outputdir /outputdir -mode S or H or L -maxworker number of threads')
     print('\t-mode H ')
     print('\t\tFor aligning high error rate long read.(Pacbio CLR, ONT)')
     print('\t-mode L')
