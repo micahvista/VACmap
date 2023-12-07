@@ -27,8 +27,9 @@ Usage
     Map long reads
     ----------------------
     conda activate vacmap_env
-    vacmap -ref output_index_path -read /read.fasta -outputdir /outputdir -mode H or L -maxworker number_of_threads
-    #-ref The index file produced by minimap2. 
+    vacmap -ref ref.fasta -read /read.fasta -outputdir /outputdir -mode H or L -maxworker number_of_threads // vacmap -ref ref.fasta -read read.fasta -outputdir /outputdir -mode L -maxworker 40
+    
+    #-ref reference sequence. 
     #-read The path of long reads. 
     #-outputdir The path to store output alignments. 
     #-maxworker The number of threads to use. 
