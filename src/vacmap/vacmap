@@ -159,10 +159,8 @@ else:
     setting_kmersize = 9
     readid = 'hhk'
     st = time.time()
-    try:
-        onemapinfolist, (alignment_list,raw_alignment_list), one_mapinfo = mammap.get_readmap_DP_test(readid, str(Seq(testseq).reverse_complement()),  contig2start, contig2seq, index_object, index2contig, hastra = True, refine = True, debug = False, H = H)   
-    except:
-        pass
+    onemapinfolist, (alignment_list,raw_alignment_list), one_mapinfo = mammap.get_readmap_DP_test(readid, str(Seq(testseq).reverse_complement()),  contig2start, contig2seq, index_object, index2contig, hastra = True, refine = True, debug = False, H = H)   
+
     
 
 
