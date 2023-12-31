@@ -27,7 +27,8 @@ Usage
     Map long reads
     ----------------------
     conda activate vacmap_env
-    vacmap -ref ref.fasta -read /read.fasta -outputdir /outputdir -mode H or L -maxworker number_of_threads // vacmap -ref ref.fasta -read read.fasta -outputdir /outputdir -mode L -maxworker 40
+    vacmap -ref ref.fasta -read /read.fasta -outputdir /outputdir -mode H or L -maxworker number_of_threads  
+    e.g. vacmap -ref hs37d5.fa.gz -read hifi_data.fastq -outputdir /outputdir -mode L -maxworker 40
     
     #-ref reference sequence. 
     #-read The path of long reads. 
