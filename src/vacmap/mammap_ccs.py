@@ -4611,7 +4611,7 @@ def extend_func(raw_alignment_list, readid, mapq, testseq, rc_testseq, testseq_l
                     bias_ratio = nowsize/ref_nowsize  
                 else:
                     bias_ratio = presize/ref_presize 
-                if(readgap > 100 and abs(readgap/bias_ratio - refgap) < 50):
+                if(min(refgap, readgap) > 100 and abs(readgap/bias_ratio - refgap) < 50):
                     target, query, target_st, target_en, query_st, query_en = get_query_target_for_cigar(preitem, nowitem, testseq, rc_testseq, testseq_len, setting_kmersize, contig2seq, contig2start)
                     diffratio = edlib.align(query = query, target = target, task = 'distance')['editDistance']/min(len(target), len(query))
                     if(diffratio>maxdiffratio):
