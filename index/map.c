@@ -179,6 +179,18 @@ s_mm128_t *mm_map_frag_(const mm_idx_t *mi, int n_segs, const int *qlens, const 
 	aa = collect_seed_hits(b->km, opt, opt->mid_occ, mi, qname, &mv, qlen_sum, &n_a, &rep_len, &n_mini_pos, &mini_pos); 
 	kfree(b->km, mv.a);
 	kfree(b->km, mini_pos);
+	if(return_cluster_count == -1){ 
+		*n_aa = n_a;    
+		if (b->km) {
+			km_stat(b->km, &kmst);
+			assert(kmst.n_blocks == kmst.n_cores); // otherwise, there is a memory leak
+			if (kmst.largest > 1U<<28 || (opt->cap_kalloc > 0 && kmst.capacity > opt->cap_kalloc)) {
+				km_destroy(b->km);
+				b->km = km_init();
+			}
+		}  
+		return aa;
+	}
 	pcluster_count = 0;
 	pre_rpos = 0;
 	for (i = 1; i < n_a; i++){
@@ -192,6 +204,14 @@ s_mm128_t *mm_map_frag_(const mm_idx_t *mi, int n_segs, const int *qlens, const 
 		kfree(b->km, aa);
 		*n_aa = 1;        
 		aa = (s_mm128_t*)kmalloc(b->km, sizeof(s_mm128_t));
+		if (b->km) {
+			km_stat(b->km, &kmst);
+			assert(kmst.n_blocks == kmst.n_cores); // otherwise, there is a memory leak
+			if (kmst.largest > 1U<<28 || (opt->cap_kalloc > 0 && kmst.capacity > opt->cap_kalloc)) {
+				km_destroy(b->km);
+				b->km = km_init();
+			}
+		}  
 		return aa;
 	}
 	cluster_info = (s_mm128_t*)kmalloc(b->km, pcluster_count * sizeof(s_mm128_t));

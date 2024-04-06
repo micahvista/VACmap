@@ -197,7 +197,7 @@ cdef class Aligner:
     
 
 
-	def map(self, seq, check_num = 20):
+	def map(self, seq, check_num = 20, mid_occ = -1):
 		cdef cmappy.mm_reg1_t *regs
 		cdef cmappy.s_mm128_t *aa
 		cdef cmappy.mm_hitpy_t h
@@ -210,8 +210,9 @@ cdef class Aligner:
 		cdef int pstrand = 1
 		cdef int nstrand = -1
 		cdef int i
-		if self._idx == NULL: return
-		map_opt = self.map_opt
+		map_opt = self.map_opt   
+		if(mid_occ != -1 and mid_occ > 0):
+			map_opt.mid_occ = mid_occ
 		if self._idx is NULL: return None
 		b = ThreadBuffer()
 		km = cmappy.mm_tbuf_get_km(b._b)
