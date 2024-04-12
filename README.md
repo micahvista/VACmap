@@ -77,7 +77,7 @@ Usage
     ----------------------
     conda activate VACmap
     cd VACmap
-    python mamsim.py -parameterfilepath parameterfile -inputgenomepath reference_genome_path -altedgenomepath alted_genome_path -outputvcfpath ouput.vcf
+    python vacsim.py -parameterfilepath parameterfile -inputgenomepath reference_genome_path -altedgenomepath alted_genome_path -outputvcfpath ouput.vcf
     #-parameterfilepath The configured parameter file path. 
     #-inputgenomepath The path of input genome sequence path. 
     #-altedgenomepath The output path of altered genome sequence path. 
