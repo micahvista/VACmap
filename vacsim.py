@@ -13,6 +13,7 @@ def prepare_usable_loc_info(contig2seq):
     contigprob_list = []
     contig2usable_interval = dict()
     allsize = 0
+    prestart = 0
     for contig in contig2seq:
         hd = heapdict()
         iloc = -1
@@ -45,7 +46,7 @@ def prepare_usable_loc_info(contig2seq):
     contigprob_list = np.array(contigprob_list)/allsize   
     return contig2usable_interval, contig_list, contigprob_list
 def repalce(from_seq, from_start, from_end, reverse, random):#return replaced string, include smaller, larger are exclude
-
+    acid = ['A', 'T', 'G', 'C']
     if(from_seq == ''):#remove this subseq
         return ''
     if(random == True):
@@ -533,7 +534,7 @@ def insertSVandoutput(parameterfilepath, inputgenomepath, altedgenomepath, outpu
 pstring = sys.argv
 forvaule = False
 pdict = {}
-
+op = ''
 for item in pstring[1:]:
     if(forvaule == True):
         forvaule = False
