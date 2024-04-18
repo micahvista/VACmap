@@ -228,7 +228,7 @@ else:
                     tmptime = c_time - tmp_st
                     t_time = c_time - st
 
-                    print(round((count - tmp_count) / tmptime), '/ sec in last‘ + str(tmptime//60) + ’minutes,', round(count / t_time), '/ sec avg')
+                    print(round((count - tmp_count) / tmptime), '/ sec in last' + str(tmptime//60) + 'minutes,', round(count / t_time), '/ sec avg')
                     tmp_st = c_time
                     tmp_count = count
 
