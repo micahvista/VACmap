@@ -2077,17 +2077,7 @@ def get_list_of_readmap1(raw_queue, savepath, index_object, contig2seq, hastra, 
     #print(unmapcountlist)
     print()
 
-def write_bam(cooked_queue, savepath):
-    with pysam.AlignmentFile(savepath+'.bam', "wb", header=header) as outf:
-        while(True):
-            if(cooked_queue.empty() == True):
-                time.sleep(1)
-            else:
-                a = cooked_queue.get()
-                if(type(a) == int):
-                    break
-                outf.write(a)
-    print('Finish Write')
+
 
 
     
