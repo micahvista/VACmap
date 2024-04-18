@@ -557,7 +557,7 @@ try:
     if('mode' in pdict):
         mode = pdict['mode']
     else:
-        mode = read
+        mode = 'read'
     hit = True
 except:
     pass
