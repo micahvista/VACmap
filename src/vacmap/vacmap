@@ -154,7 +154,7 @@ else:
         contig2start[item[0].decode()] = item[2]
         contig2seq[item[0].decode()] = index_object.seq(item[0].decode())
         index2contig.append(item[0].decode())
-        header['SQ'].append({'LN': len(index_object.seq(item[0].decode())), 'SN': item[0].decode()})
+        header['SQ'].append({'LN': len(contig2seq[item[0].decode()]), 'SN': item[0].decode()})
         contig2iloc[item[0].decode()] = iloc
     header['PG'] = [{'ID': 'VACmap', 'PN': 'VACmap', 'VN': '1.0', 'CL': command}] 
 
@@ -165,7 +165,6 @@ else:
     readid = 'hhk'
     st = time.time()
     onemapinfolist, (alignment_list,raw_alignment_list), one_mapinfo, f_redo_ratio = mammap.get_readmap_DP_test(readid, str(Seq(testseq).reverse_complement()),  contig2start, contig2seq, index_object, index2contig, hastra = True, refine = True, debug = False, H = H)  
-    print(f_redo_ratio)
 
     
 
@@ -174,7 +173,8 @@ else:
 
     n = max_worker
 
-    raw_queue, cooked_queue = multiprocessing.Queue(maxsize=1000), multiprocessing.Queue(maxsize=1000)
+    raw_queue = multiprocessing.Queue(maxsize=max_worker*200)
+    print(max_worker*200, max_worker)
     for count in range(1, n+1):
         savepath = prefix+str(count)
         print(savepath)
@@ -183,7 +183,9 @@ else:
         else:
             multiprocessing.Process(target=mammap.get_list_of_readmap_asm_1, args=(raw_queue, savepath,  index_object, contig2seq, True, H, header)).start()
     st = time.time()
+    tmp_st = st
     count = 0
+    tmp_count = 0
     unique_set = set()
     for fastapath in [readpath]:
         if('bam' == readpath[-3:]):
@@ -219,13 +221,20 @@ else:
                 seq = rec[1]
                 count += 1
 
+                raw_queue.put((name, seq, rec[2]))
+                if(count % 100000 == 0):
+                    c_time = time.time()
+                    
+                    tmptime = c_time - tmp_st
+                    t_time = c_time - st
 
-                if(raw_queue.full() == False):
-                    raw_queue.put((name, seq, rec[2]))
-                else:
-                    time.sleep(1)
-                if(count%100000 == 0):
-                    print(count, time.time() - st)
+                    print(round((count - tmp_count) / tmptime), '/ sec in last‘ + str(tmptime//60) + ’minutes,', round(count / t_time), '/ sec avg')
+                    tmp_st = c_time
+                    tmp_count = count
+
+                        
+                    
+
 
     for i in range(n):
         raw_queue.put(i)
