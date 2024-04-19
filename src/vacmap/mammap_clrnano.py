@@ -9683,7 +9683,7 @@ def return_main_alignment_size(contig2start, raw_alignment_list):
 
 #20240415
 def decode_hit(index_object, index2contig, testseq, testseq_len, contig2start, kmersize, contig2seq, skipcost = (50., 30.), maxdiff = (50, 30), maxgap = 200, check_num = 20, c_bias = 5000, bin_size = 100, overlapprecentage = 0.5, hastra = True, H = False, mid_occ = -1):            
-    redo_ratio = 5
+    redo_ratio = 10
     st = time.time()
     need_reverse, one_mapinfo = get_reversed_chain_numpy_rough(np.array(index_object.map(testseq, check_num = check_num,mid_occ = mid_occ)), testseq_len)
     #print(need_reverse)
