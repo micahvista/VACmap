@@ -289,7 +289,7 @@ def fastx_read(fn, read_comment=False):
 
 
 
-def k_cigar(target, query, match = 2, mismatch = -4, gap_open_1 = 4, gap_extend_1 = 2, gap_open_2 = 24, gap_extend_2 = 1, bw=500, zdropvalue=400):
+def k_cigar_m(target, query, match = 2, mismatch = -4, gap_open_1 = 4, gap_extend_1 = 2, gap_open_2 = 24, gap_extend_2 = 1, bw=500, zdropvalue=400):
 	cdef int *cigarcode, n_cigarcode, zdropped, max_q, max_t, delcount = 0, inscount = 0, iloc = 0
 	if(max(len(target), len(query)) > 500000):
 		return '', 1, 0, 0, 999, 999
@@ -312,7 +312,67 @@ def k_cigar(target, query, match = 2, mismatch = -4, gap_open_1 = 4, gap_extend_
 	free(cigarcode)
 	return ''.join(cigarlist), zdropped, max_q+1, max_t+1, delcount, inscount
 
+def k_cigar_eqx(target, query, match = 2, mismatch = -4, gap_open_1 = 4, gap_extend_1 = 2, gap_open_2 = 24, gap_extend_2 = 1, bw=500, zdropvalue=400):
+	cdef int *cigarcode, n_cigarcode, zdropped, max_q, max_t, delcount = 0, inscount = 0, iloc = 0
+	if(max(len(target), len(query)) > 500000):
+		return '', 1, 0, 0, 999, 999
+	btarget = target if isinstance(target, bytes) else target.encode()
+	bquery = query if isinstance(query, bytes) else query.encode()
+	cigarcode = cmappy.mappy_k_cigar(btarget, bquery, &n_cigarcode, &zdropped, &max_q, &max_t, match, mismatch, gap_open_1, gap_extend_1, gap_open_2, gap_extend_2, bw, zdropvalue, &delcount, &inscount)
+	if(n_cigarcode == 0):
+		return '', 1, 0, 0, 999, 999
+	cigarlist = []
+	ops = 'MIDNSHP=XB'
+	readloc = 0
+	refloc = 0
+	for iloc in range(n_cigarcode):
+		item = cigarcode[iloc]
+		if(item > 0):
+			cigarlist.append(str(item))
+		elif(item < 0):
+			if(ops[-(item+1)] == 'D'):
+				refloc += cigarcode[iloc-1]
+			elif(ops[-(item+1)] == 'I'):
+				readloc += cigarcode[iloc-1]
+			else:
+				cigarlist.pop()
+				msize = cigarcode[iloc-1]
+				if(target[refloc] == query[readloc]):
+					preop = [1, '=']
+				else:
+					preop = [1, 'X']
+				for jloc in range(1, msize):
+					if(target[refloc + jloc] == query[readloc + jloc]):
+						if(preop[1] == '='):
+							preop[0] += 1
+						else:#(preop[1] == 'X')
+							cigarlist.append(str(preop[0]))
+							cigarlist.append(preop[1])
+							preop = [1, '=']
+					else:
+						if(preop[1] == 'X'):
+							preop[0] += 1
+						else:#(preop[1] == '=')
+							cigarlist.append(str(preop[0]))
+							cigarlist.append(preop[1])
+							preop = [1, 'X']
+				cigarlist.append(str(preop[0]))
+				cigarlist.append(preop[1])
+				refloc += msize
+				readloc += msize   
+				continue
+			cigarlist.append(ops[-(item+1)])
+		else:
+			print('k_cigar: zeros in cigarcode') 
+			break
+	free(cigarcode)
+	return ''.join(cigarlist), zdropped, max_q+1, max_t+1, delcount, inscount
 
+def k_cigar(target, query, match = 2, mismatch = -4, gap_open_1 = 4, gap_extend_1 = 2, gap_open_2 = 24, gap_extend_2 = 1, bw=500, zdropvalue=400, eqx = False):
+	if(eqx == True):
+		return k_cigar_eqx(target, query, match, mismatch, gap_open_1, gap_extend_1, gap_open_2, gap_extend_2, bw, zdropvalue)
+	else:
+		return k_cigar_m(target, query, match, mismatch, gap_open_1, gap_extend_1, gap_open_2, gap_extend_2, bw, zdropvalue)
 
 
 def verbose(v=None):
