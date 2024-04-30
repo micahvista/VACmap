@@ -27,21 +27,18 @@ Usage
     Map long reads
     ----------------------
     conda activate vacmap_env
-    vacmap -ref ref.fasta -read /read.fasta -outputdir /outputdir -mode H or L -maxworker number_of_threads  
-    e.g. vacmap -ref hs37d5.fa.gz -read hifi_data.fastq -outputdir /outputdir -mode L -maxworker 40
+    vacmap -ref ref.fasta -read /read.fasta -mode H or L -t number_of_threads| samtools sort -@4 > alignments.sorted.bam
+    samtools index -@4 alignments.sorted.bam
     
     #-ref reference sequence. 
     #-read The path of long reads. 
-    #-outputdir The path to store output alignments. 
-    #-maxworker The number of threads to use. 
+    #-t The number of threads to use. 
     #-mode H For aligning high error rate long read (Pacbio CLR, ONT). 
-    #-mode L For aligning low error rate long read (Pacbio CCS). 
+    #-mode L For aligning low error rate long read (Pacbio HiFi). 
+    #--eqx Output =/X CIGAR operators for sequence match/mismatch.
+    #--MD Output the MD tag.
+    #--cs[=short|long] Output the cs tag. (deflaut: short cs).
     
-    Merge and sort BAM file
-    ----------------------
-    samtools merge -@8 merged.bam /outputdir/*bam
-    samtools sort -@4 merged.bam > merged.sorted.bam
-    samtools index -@8 merged.sorted.bam
 
 
 
