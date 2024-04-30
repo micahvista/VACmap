@@ -11,16 +11,6 @@ Installation
     conda activate vacmap_env
     python setup.py install
 
-Input
------
-
-VACmap takes long reads and reference sequences as inputs. 
-
-Output
-------
-
-VACmap outputs alignment files in compressed BAM format.
-
 Usage
 ----------------------    
     
