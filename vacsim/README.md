@@ -48,4 +48,4 @@ Usage
     
     ~/SURVIVOR/Debug/SURVIVOR simSV alted_genome_path parameter_file 0.001 0 alted_genome_path.snp
     
-    ~/SURVIVOR/Debug/SURVIVOR simreads alted_genome_path.snp.fasta ~/SURVIVOR/HG002_Pac_error_profile_bwa.txt 40 PAC40x.fasta
+    ~/SURVIVOR/Debug/SURVIVOR simreads alted_genome_path.snp.fasta ~/SURVIVOR/HG002_Pac_error_profile_bwa.txt 20 PAC40x.fasta
