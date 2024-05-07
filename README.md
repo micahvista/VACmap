@@ -47,7 +47,7 @@ If you experience any problems or have suggestions please create an issue or a p
 Citation
 ---------
 
-https://www.biorxiv.org/content/10.1101/2023.08.03.551566v1
+https://www.biorxiv.org/content/10.1101/2023.08.03.551566v2
 
 License
 -------
