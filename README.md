@@ -14,8 +14,6 @@ Installation
 Usage
 ----------------------    
     
-    Map long reads
-    ----------------------
     conda activate vacmap_env
     vacmap -ref /ref.fasta -read /read.fasta -mode H or L -t number_of_threads | samtools sort -@4 > alignments.sorted.bam
     samtools index -@4 alignments.sorted.bam
