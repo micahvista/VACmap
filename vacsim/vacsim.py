@@ -566,5 +566,5 @@ if(hit == True):
     insertSVandoutput(parameterfilepath, inputgenomepath, altedgenomepath, outputvcfpath, heterozygous_ratio, mode)
 else:
     print('Usage')
-    print('python mamsim.py -parameterfilepath parameterfilepath -inputgenomepath inputgenomepath -altedgenomepath altedgenomepath -outputvcfpath outputvcfpath -heterozygous_ratio 0.8')
+    print('python vacsim.py -parameterfilepath parameterfilepath -inputgenomepath inputgenomepath -altedgenomepath altedgenomepath -outputvcfpath outputvcfpath -heterozygous_ratio 0.8')
      
