@@ -1,6 +1,8 @@
 # VACmap
 VACmap-—a long-read aligner specifically designed for complex structural variation discovery.
 
+This a demonstration of a non-linear alignment algorithm used VACmap: http://64.64.240.35:8050/.
+
 
 Installation
 ------------
