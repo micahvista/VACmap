@@ -28,7 +28,6 @@ Usage
     #--eqx Output =/X CIGAR operators for sequence match/mismatch.
     #--MD Output the MD tag.
     #--cs[=short|long] Output the cs tag. (deflaut: short cs).
-    #--cs[=short|long] Output the cs tag. (deflaut: short cs).
     #-k k-mer size (no larger than 28, deflaut: 15) # set -k 19 -w 10 for HiFi data 
         to reduce run time (2X faster) but there is very small decrease in accuracy.
     #-w minimizer window size. (deflaut: 10)
