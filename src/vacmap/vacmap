@@ -123,7 +123,16 @@ else:
         hit = True
 if('t' not in pdict):
     pdict['t'] = 8
-
+    
+if('k' not in pdict):
+    pdict['k'] = '15'
+else:
+    pdict['k'] = str(pdict['k'])
+    
+if('w' not in pdict):
+    pdict['w'] = '10'
+else:
+    pdict['w'] = str(pdict['w'])
 
 if(hit == True):
     print('Usage')
@@ -156,17 +165,17 @@ else:
         
                     
     refpath = pdict['ref']
-    if((os.path.isfile(refpath+"_w10_k15.mmi") == False)):
+    if((os.path.isfile(refpath+"_w"+pdict['w']+"_k"+pdict['k']+".mmi") == False)):
         if(('mmi' != refpath[-3:])):
             logging.info("Using minimap2 to build reference index")
             import subprocess
-            subprocess.run(["minimap2", "-d", refpath+"_w10_k15.mmi", refpath, "-w", "10", "-k", "15"]) 
-            refpath = refpath+"_w10_k15.mmi"
+            subprocess.run(["minimap2", "-d", refpath+"_w"+pdict['w']+"_k"+pdict['k']+".mmi", refpath, "-w", pdict['w'], "-k", pdict['k']]) 
+            refpath = refpath+"_w"+pdict['w']+"_k"+pdict['k']+".mmi"
             if(os.path.isfile(refpath) == False):
                 logging.error("Failed to build reference index")
                 hit = True
     else:
-        refpath = refpath+"_w10_k15.mmi"
+        refpath = refpath+"_w"+pdict['w']+"_k"+pdict['k']+".mmi"
     if(hit == False):
         pdict['ref'] = refpath
 
@@ -176,7 +185,7 @@ else:
         readpath = pdict['read']
         max_worker = pdict['t']
 
-        index_object = mp.Aligner(refpath, k = 15, w = 10)  # load index
+        index_object = mp.Aligner(refpath)  # load index
 
         if not index_object: raise Exception("ERROR: failed to load index")
         contig2start = Dict()
