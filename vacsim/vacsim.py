@@ -139,7 +139,7 @@ def get_start_loc(svspan_1, svspan_2, contig_list, contigprob_list, contig2usabl
         while(True):
             contig_1 = chioce_contig(contig_list, contigprob_list)
             contig_2 = chioce_contig(contig_list, contigprob_list)
-            if(contig_1 != contig_2):
+            if((svspan_2 == 0) or (contig_1 != contig_2)):
                 break
 
         item = contig2usable_interval[contig_1].popitem()
@@ -167,7 +167,55 @@ def get_start_loc(svspan_1, svspan_2, contig_list, contigprob_list, contig2usabl
         contig2usable_interval[contig_2][(item_2[0][0], refstart_2)] = 1 / (refstart_2 - item_2[0][0])
         contig2usable_interval[contig_2][(refstart_2 + svspan_2, item_2[0][1])] = 1 / (item_2[0][1] - refstart_2 - svspan_2)
         return pass_flag, contig_1, refstart_1, contig_2, refstart_2
+def get_start_loc(svspan_1, svspan_2, contig_list, contigprob_list, contig2usable_interval):
+    edge_size = 200
+    pass_flag = False
+    count = 0
+    while(True):
+        count += 1
+        if(count > 50):
+            return pass_flag, '-1', -1, '-1', -1
+        while(True):
+            contig_1 = chioce_contig(contig_list, contigprob_list)
+            contig_2 = chioce_contig(contig_list, contigprob_list)
+            if((svspan_2 == 0) or (contig_1 != contig_2)):
+                break
+
+        item = contig2usable_interval[contig_1].popitem()
+        if(((item[0][1] - item[0][0]) - 2*edge_size) < svspan_1):
+            contig2usable_interval[contig_1][item[0]] = item[1]
+            continue
+        if(item[0][0] + edge_size >= item[0][1] - svspan_1 - edge_size):
+            continue
+        refstart_1 = np.random.randint(item[0][0] + edge_size, item[0][1] - svspan_1 - edge_size)
+        item_1 = item
         
+        if(svspan_2 == 0):
+            pass_flag = True
+        
+            contig2usable_interval[contig_1][(item_1[0][0], refstart_1)] = 1 / (refstart_1 - item_1[0][0])
+            contig2usable_interval[contig_1][(refstart_1 + svspan_1, item_1[0][1])] = 1 / (item_1[0][1] - refstart_1 - svspan_1)
+            return pass_flag, contig_1, refstart_1, contig_1, refstart_1
+            
+            
+
+        item = contig2usable_interval[contig_2].popitem()
+        if(((item[0][1] - item[0][0]) - 100) < svspan_2):
+            contig2usable_interval[contig_2][item[0]] = item[1]
+            continue
+        if(item[0][0] + edge_size >= item[0][1] - svspan_2 - edge_size):
+            continue
+        refstart_2 = np.random.randint(item[0][0] + edge_size, item[0][1] - svspan_2 - edge_size)
+        item_2 = item
+        pass_flag = True
+        
+        contig2usable_interval[contig_1][(item_1[0][0], refstart_1)] = 1 / (refstart_1 - item_1[0][0])
+        contig2usable_interval[contig_1][(refstart_1 + svspan_1, item_1[0][1])] = 1 / (item_1[0][1] - refstart_1 - svspan_1)
+        
+        contig2usable_interval[contig_2][(item_2[0][0], refstart_2)] = 1 / (refstart_2 - item_2[0][0])
+        contig2usable_interval[contig_2][(refstart_2 + svspan_2, item_2[0][1])] = 1 / (item_2[0][1] - refstart_2 - svspan_2)
+        return pass_flag, contig_1, refstart_1, contig_2, refstart_2
+      
 def create_sim_sv_info_list(simulate_info_text):
     sim_sv_info_list = []
     for line in simulate_info_text.split('\n'):
@@ -566,5 +614,5 @@ if(hit == True):
     insertSVandoutput(parameterfilepath, inputgenomepath, altedgenomepath, outputvcfpath, heterozygous_ratio, mode)
 else:
     print('Usage')
-    print('python vacsim.py -parameterfilepath parameterfilepath -inputgenomepath inputgenomepath -altedgenomepath altedgenomepath -outputvcfpath outputvcfpath -heterozygous_ratio 0.8')
+    print('python mamsim.py -parameterfilepath parameterfilepath -inputgenomepath inputgenomepath -altedgenomepath altedgenomepath -outputvcfpath outputvcfpath -heterozygous_ratio 0.8')
      
