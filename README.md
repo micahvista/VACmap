@@ -20,7 +20,7 @@ Usage
     vacmap -ref /ref.fasta -read /read.fasta -mode H or L -t number_of_threads | samtools sort -@4 > alignments.sorted.bam
     samtools index -@4 alignments.sorted.bam
     
-    #-ref reference sequence. 
+    #-ref The path of reference sequence. 
     #-read The path of long reads. 
     #-t The number of threads to use. 
     #-mode H For aligning high error rate long read (Pacbio CLR, ONT). 
@@ -28,6 +28,9 @@ Usage
     #--eqx Output =/X CIGAR operators for sequence match/mismatch.
     #--MD Output the MD tag.
     #--cs[=short|long] Output the cs tag. (deflaut: short cs).
+    #--cs[=short|long] Output the cs tag. (deflaut: short cs).
+    #-k k-mer size (no larger than 28, deflaut: 15) # set -k 19 -w 10 for HiFi data to reduce run time (2X faster) but there is very small decrease in accuracy.
+    #-w minimizer window size. (deflaut: 15)
     
 
 
