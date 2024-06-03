@@ -11730,8 +11730,8 @@ def get_list_of_readmap_stdout(raw_queue, cooked_queue, minimap, contig2seq, has
                 onemapinfolist, (alignment_list,raw_alignment_list), TRA_signal, f_redo_ratio = get_readmap_DP_test(readidandseq[0], readidandseq[1], contig2start, contig2seq, minimap, index2contig, hastra = False, redo_ratio = redo_ratio, eqx = option['eqx'])
         except:
             #logging.info('Failed to convert to sam record')
-            logging.info(readidandseq[0])
-            logging.info(readidandseq[1])
+            #logging.info(readidandseq[0])
+            #logging.info(readidandseq[1])
             continue
 
 
