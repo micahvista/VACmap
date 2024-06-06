@@ -12298,9 +12298,6 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list(one_mapinfo,
     repeat_weight = 20
     max_kmersize = 0
     
-    #gap_arr = np.empty(one_mapinfo[-1][0])#mark 1
-    #gap_arr[0] = 200#mark 1
-    
     g_max_scores = 0.
     g_max_index = -1
      
@@ -12311,18 +12308,11 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list(one_mapinfo,
         else:
             gapcost_list[gapcost] = (0.01 * kmersize * gapcost + 2 * np.log2(gapcost))
     
-    #var_gap = np.arange(1, 10001)
-    #var_gap = np.minimum(var_gap/100, np.log(var_gap))
-
 
     n = len(one_mapinfo)
     S = np.empty(n, np.float64)
     P = np.empty(n, np.int64)
     T = np.empty(n, np.int64)
-
-
-    
-
     
 
     opcount = 0
@@ -12379,8 +12369,6 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list(one_mapinfo,
         
         if(prereadloc < one_mapinfo[i][0]):
             
-            #if((opcount/one_mapinfo[i][0] > 2000) and one_mapinfo[i][0] > 1000):
-                #return 0., [(0, 0, 0, 0)]
             k = testspace_en
             while(k < i):
                 
@@ -12391,10 +12379,7 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list(one_mapinfo,
                 
                 k += 1
             
-            testspace_en = i
-            
-            #gap_arr[prereadloc] = 200+ 2*(one_mapinfo[i][0] - prereadloc)#mark 1
-            
+            testspace_en = i            
             c_repeat_weight = coverage_dict[one_mapinfo[i][0]]
             skipcost = oskipcost + c_repeat_weight
             maxdiff = max(omaxdiff - coverage_dict[one_mapinfo[i][0]], 10)
@@ -12409,8 +12394,7 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list(one_mapinfo,
 
         for j in S_arg[:testspace_en][::-1]:
             
-            
-            #opcount += 1     
+              
             
             if(S[j] < (max_scores - one_mapinfo[i][3])):
                 
@@ -12420,38 +12404,33 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list(one_mapinfo,
             readgap = (one_mapinfo[i][0] - one_mapinfo[j][0] - one_mapinfo[j][3])
 
             if((readgap < 0)):
-                #print_log('error')
                 continue
                 
             nocost = False
             filtered = True
-            
-            if(one_mapinfo[i][2] == 1):
-                
-                        #    y_2 - y_1 - a_1
-                refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
-                
+            if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                if(one_mapinfo[i][2] == 1):
+                    refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
+                else:
+                    refgap = (one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3])
             else:
-                
-                        #     y_1 - y_2 - a_2
-                refgap = (one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3])
-                
+                if(one_mapinfo[j][2] == -1):
+                    refgap = one_mapinfo[i][1] - one_mapinfo[j][1]
+                else:
+                    refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - one_mapinfo[j][1] - one_mapinfo[j][3]
+
+   
             
-            while(True):
+            while(refgap >= 0):
                 if(one_mapinfo[i][2] != one_mapinfo[j][2]):
                     
                     break
                     
-
-
                 gapcost = abs(readgap - refgap)
                 
-                if((readgap  > maxgap) or (gapcost > maxdiff)):
-                #if((readgap  > gap_arr[one_mapinfo[j][0]]) or (gapcost > maxdiff)):#mark 1                   
+                if((readgap  > maxgap) or (gapcost > maxdiff)):                 
                     break
-                    
-
-                    
+                                        
                 gapcost = gapcost_list[gapcost]
                 
                 test_scores = S[j] + one_mapinfo[i][3] - gapcost
@@ -12460,51 +12439,35 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list(one_mapinfo,
                 
                 break
             if(filtered == True):
-                if(one_mapinfo[i][2] != one_mapinfo[j][2]):
-                    if(one_mapinfo[j][2] == -1):
-                        refgap = one_mapinfo[i][1] - one_mapinfo[j][1]
-                    else:
-                        refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - one_mapinfo[j][1] - one_mapinfo[j][3]
-                #test_scores = S[j] - skipcost + one_mapinfo[i][3]
                 gapcost = abs(readgap - refgap)#mark 1
-                #if(gapcost > 200):
-                    #skipcost = 50 + kmersize + c_repeat_weight
-                #test_scores = S[j] - skipcost + one_mapinfo[i][3] - min(gapcost/100, 2 * np.log(gapcost))
-                test_scores = S[j] - skipcost + one_mapinfo[i][3] -  min(36, 30 + 0.5 * np.log(max(gapcost, 1)), min(10, gapcost/100)+min(30, gapcost/1000))
-
-                '''gapcost = abs(readgap - abs(refgap))
-                if(gapcost < 10000):
-
-                    test_scores = S[j] - skipcost + one_mapinfo[i][3] - var_gap[gapcost]
-                else:
-                    test_scores = S[j] - skipcost + one_mapinfo[i][3] - 10.'''
-
-            '''if(test_scores > max_scores):
-                max_scores = test_scores
-                pre_index = j
-            elif((test_scores == max_scores) and (pre_index != -9999999)):
-                pre_refdistance = abs(one_mapinfo[i][1] - one_mapinfo[pre_index][1])
-                now_refdistance = abs(one_mapinfo[i][1] - one_mapinfo[j][1])
-                if(now_refdistance < pre_refdistance):
-                    max_scores = test_scores
-                    pre_index = j'''
-            if(test_scores > max_scores):
-                max_scores = test_scores
-                pre_index = j
                 if(one_mapinfo[i][2] != one_mapinfo[j][2]):
-                    T[i] = abs(T[j] - abs(one_mapinfo[i][1] - one_mapinfo[j][1]))
+                    invweight = 0
+                    if(T[j] != 0):
+                        invweight = min(abs(T[j] - gapcost)*0.3, 20)
+                    test_scores = S[j] - invweight - skipcost + one_mapinfo[i][3] -  min(36, 30 + 0.5 * np.log(max(gapcost, 1)), min(10, gapcost/100)+min(30, gapcost/1000))
+                else:
+                    test_scores = S[j] - skipcost + one_mapinfo[i][3] -  min(36, 30 + 0.5 * np.log(max(gapcost, 1)), min(10, gapcost/100)+min(30, gapcost/1000))
+
+            if(test_scores > max_scores):
+
+                max_scores = test_scores
+                pre_index = j
+                
+                if(one_mapinfo[i][2] != one_mapinfo[j][2]):
+                    if(T[j] != 0):
+                        T[i] = 0
+                    else:
+                        T[i] = gapcost
                 else:
                     T[i] = T[j]
                     
             elif((test_scores == max_scores) and (pre_index != -9999999)):
                 if(one_mapinfo[i][2] != one_mapinfo[j][2]):
-                    if(abs(T[j] - abs(one_mapinfo[i][1] - one_mapinfo[j][1])) < T[i]):
-                        T[i] = abs(T[j] - abs(one_mapinfo[i][1] - one_mapinfo[j][1]))
-                        pre_index = j
-                else:
-                    if(T[j] < T[i]):
-                        T[i] = T[j]
-                        pre_index = j
+                    if(T[j] != 0):
+                        if(abs(T[j] - gapcost) < abs(T[pre_index] - gapcost)):
+                            pre_index = j
+                            
+
 
         S[i] = max_scores
         P[i] = pre_index
@@ -12513,9 +12476,7 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list(one_mapinfo,
 
             g_max_scores = max_scores
             g_max_index = i
-        elif(max_scores >= g_max_scores):
-            if(T[g_max_index] > T[i]):
-                g_max_index = i
+
       
 
         
@@ -12662,57 +12623,43 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_all(one_ma
                 
                 break
 
-            #print_log(one_mapinfo[j])
-            #print_log(one_mapinfo[i])
+
             readgap = (one_mapinfo[i][0] - one_mapinfo[j][0] - one_mapinfo[j][3])
-            #print_log(readgap)
+
             goodsignal = False
             if((readgap < 0)):
 
                 if(one_mapinfo[i][2] == one_mapinfo[j][2]):
                     if(one_mapinfo[i][2] == 1):
-
-                                #    y_2 - y_1 - a_1
                         refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
-
-
                     else:
-                         #1645 17384    -1    15]
-                        #[ 1647 17382    -1    15
-
-                                #     y_1 - y_2 - a_2
                         refgap = one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3]
                     if(refgap == readgap):
                         goodsignal = True
                 if(goodsignal == False):    
-                #print_log('error')
                     continue
-            #print_log(goodsignal)  
-            #print_log()
             nocost = False
             filtered = True
             
-            if(one_mapinfo[i][2] == 1):
-                
-                        #    y_2 - y_1 - a_1
-                refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
-                
+            if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                if(one_mapinfo[i][2] == 1):
+
+                    refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
+                else:
+                    refgap = (one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3])
             else:
-                
-                        #     y_1 - y_2 - a_2
-                refgap = (one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3])
+                if(one_mapinfo[j][2] == -1):
+                    refgap = one_mapinfo[i][1] - one_mapinfo[j][1]
+                else:
+                    refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - one_mapinfo[j][1] - one_mapinfo[j][3]
+
                 
             if(goodsignal == False):
-                while(True):
+                while(refgap >= 0):
                     if(one_mapinfo[i][2] != one_mapinfo[j][2]):
-
-                        break
-
-                    
-
+                        break                   
                     gapcost = abs(readgap - refgap)
 
-                    #if((readgap  > maxgap) or (gapcost > maxdiff)):
                     if((readgap  > gap_arr[one_mapinfo[j][0]]) or (gapcost > maxdiff)):#mark 1                   
                         break
 
@@ -12730,54 +12677,16 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_all(one_ma
                 filtered = False
 
             if(filtered == True):
-                #test_scores = S[j] - skipcost + one_mapinfo[i][3]
-                if(one_mapinfo[i][2] != one_mapinfo[j][2]):
-                    if(one_mapinfo[j][2] == -1):
-                        refgap = one_mapinfo[i][1] - one_mapinfo[j][1]
-                    else:
-                        refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - one_mapinfo[j][1] - one_mapinfo[j][3]
+
                 gapcost = abs(readgap - refgap)#mark 1
 
-                #test_scores = S[j] - skipcost + one_mapinfo[i][3] - min(gapcost/100, 2 * np.log(gapcost))
                 test_scores = S[j] - skipcost + one_mapinfo[i][3] -  min(36, 30 + 0.5 * np.log(max(gapcost, 1)), min(10, gapcost/100)+min(30, gapcost/1000))
 
-                '''if(one_mapinfo[i][2] == one_mapinfo[j][2]):
-                    #test_scores = S[j] - skipcost + one_mapinfo[i][3]
-                    gapcost = abs(readgap - abs(refgap))#mark 1
-                    if(gapcost < 10000):#mark 1
 
-                        test_scores = S[j] - skipcost + one_mapinfo[i][3] - var_gap[gapcost]#mark 1
-                    else:
-                        test_scores = S[j] - skipcost + one_mapinfo[i][3] - 10.#mark 1
-                else:
-                    test_scores = S[j] - skipcost + one_mapinfo[i][3]'''
-
-            '''if(test_scores > max_scores):
-                max_scores = test_scores
-                pre_index = j
-            elif((test_scores == max_scores) and (pre_index != -9999999)):
-                pre_refdistance = abs(one_mapinfo[i][1] - one_mapinfo[pre_index][1])
-                now_refdistance = abs(one_mapinfo[i][1] - one_mapinfo[j][1])
-                if(now_refdistance < pre_refdistance):
-                    max_scores = test_scores
-                    pre_index = j'''
             if(test_scores > max_scores):
                 max_scores = test_scores
                 pre_index = j
-                if(one_mapinfo[i][2] != one_mapinfo[j][2]):
-                    T[i] = abs(T[j] - abs(one_mapinfo[i][1] - one_mapinfo[j][1]))
-                else:
-                    T[i] = T[j]
-                    
-            elif((test_scores == max_scores) and (pre_index != -9999999)):
-                if(one_mapinfo[i][2] != one_mapinfo[j][2]):
-                    if(abs(T[j] - abs(one_mapinfo[i][1] - one_mapinfo[j][1])) < T[i]):
-                        T[i] = abs(T[j] - abs(one_mapinfo[i][1] - one_mapinfo[j][1]))
-                        pre_index = j
-                else:
-                    if(T[j] < T[i]):
-                        T[i] = T[j]
-                        pre_index = j
+                
 
         S[i] = max_scores
         P[i] = pre_index
@@ -12786,9 +12695,7 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_all(one_ma
 
             g_max_scores = max_scores
             g_max_index = i
-        elif(max_scores >= g_max_scores):
-            if(T[g_max_index] > T[i]):
-                g_max_index = i
+       
 
 
         
@@ -12911,13 +12818,7 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_fast_all(o
         max_kmersize = max(one_mapinfo[i][3], max_kmersize)
         
         
-        if(prereadloc < one_mapinfo[i][0]):
-            
-            #if((opcount/one_mapinfo[i][0] > 2000) and one_mapinfo[i][0] > 1000):
-                #return 0., [(0, 0, 0, 0)]
-                
-                
-                
+        if(prereadloc < one_mapinfo[i][0]):                
             k = testspace_en
             while(k < i):
                 
@@ -13005,35 +12906,30 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_fast_all(o
                 nocost = False
                 filtered = True
 
-                if(one_mapinfo[i][2] == 1):
+                if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                    if(one_mapinfo[i][2] == 1):
 
-                            #    y_2 - y_1 - a_1
-                    refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
-
+                        refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
+                    else:
+                        refgap = (one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3])
                 else:
+                    if(one_mapinfo[j][2] == -1):
+                        refgap = one_mapinfo[i][1] - one_mapinfo[j][1]
+                    else:
+                        refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - one_mapinfo[j][1] - one_mapinfo[j][3]
 
-                            #     y_1 - y_2 - a_2
-                    refgap = (one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3])
 
 
-                while(True):
+                while(refgap >= 0):
                     if(one_mapinfo[i][2] != one_mapinfo[j][2]):
-
-                        break
-
-                    
-
+                        break                  
                     gapcost = abs(readgap - refgap)
 
                     if(gapcost > maxdiff):
-
                         break
 
-                    #if(readgap  > maxgap):
                     if(readgap  > gap_arr[one_mapinfo[j][0]]):#mark 1                   
                         break
-
-
 
                     gapcost = gapcost_list[gapcost]
 
@@ -13044,46 +12940,15 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_fast_all(o
 
                     break
                 if(filtered == True):
-                    if(one_mapinfo[i][2] != one_mapinfo[j][2]):
-                        if(one_mapinfo[j][2] == -1):
-                            refgap = one_mapinfo[i][1] - one_mapinfo[j][1]
-                        else:
-                            refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - one_mapinfo[j][1] - one_mapinfo[j][3]
-                    gapcost = abs(readgap - (refgap))#mark 1
 
-                    #test_scores = S[j] - skipcost + one_mapinfo[i][3] - min(gapcost/100, 2 * np.log(gapcost))
+                    gapcost = abs(readgap - refgap)#mark 1
+
                     test_scores = S[j] - skipcost + one_mapinfo[i][3] -  min(36, 30 + 0.5 * np.log(max(gapcost, 1)), min(10, gapcost/100)+min(30, gapcost/1000))
 
-                '''if(test_scores > max_scores):
-                    max_scores = test_scores
-                    pre_index = j
-                elif((test_scores == max_scores) and (pre_index != -9999999)):
-                    pre_refdistance = abs(one_mapinfo[i][1] - one_mapinfo[pre_index][1])
-                    now_refdistance = abs(one_mapinfo[i][1] - one_mapinfo[j][1])
-                    if(now_refdistance < pre_refdistance):
-                        max_scores = test_scores
-                        pre_index = j'''
                 if(test_scores > max_scores):
                     max_scores = test_scores
                     pre_index = j
-                    if(one_mapinfo[i][2] != one_mapinfo[j][2]):
-                        T[i] = abs(T[j] - abs(one_mapinfo[i][1] - one_mapinfo[j][1]))
-                    else:
-                        T[i] = T[j]
-
-                elif((test_scores == max_scores) and (pre_index != -9999999)):
-                    if(one_mapinfo[i][2] != one_mapinfo[j][2]):
-                        if(abs(T[j] - abs(one_mapinfo[i][1] - one_mapinfo[j][1])) < T[i]):
-                            T[i] = abs(T[j] - abs(one_mapinfo[i][1] - one_mapinfo[j][1]))
-                            pre_index = j
-                    else:
-                        if(T[j] < T[i]):
-                            T[i] = T[j]
-                            pre_index = j
-
-
-
-
+                    
 
 
                 en_loc = st_loc
@@ -13099,48 +12964,37 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_fast_all(o
 
                     break
 
-                #print_log(one_mapinfo[j])
-                #print_log(one_mapinfo[i])
+
                 readgap = (one_mapinfo[i][0] - one_mapinfo[j][0] - one_mapinfo[j][3])
-                #print_log(readgap)
                 goodsignal = False
                 if((readgap < 0)):
 
                     if(one_mapinfo[i][2] == one_mapinfo[j][2]):
                         if(one_mapinfo[i][2] == 1):
-
-                                    #    y_2 - y_1 - a_1
                             refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
-
-
                         else:
-                             #1645 17384    -1    15]
-                            #[ 1647 17382    -1    15
-
-                                    #     y_1 - y_2 - a_2
                             refgap = one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3]
                         if(refgap == readgap):
                             goodsignal = True
                     if(goodsignal == False):    
-                    #print_log('error')
                         continue
-                #print_log(goodsignal)  
-                #print_log()
                 nocost = False
                 filtered = True
 
-                if(one_mapinfo[i][2] == 1):
+                if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                    if(one_mapinfo[i][2] == 1):
 
-                            #    y_2 - y_1 - a_1
-                    refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
-
+                        refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
+                    else:
+                        refgap = (one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3])
                 else:
-
-                            #     y_1 - y_2 - a_2
-                    refgap = (one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3])
+                    if(one_mapinfo[j][2] == -1):
+                        refgap = one_mapinfo[i][1] - one_mapinfo[j][1]
+                    else:
+                        refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - one_mapinfo[j][1] - one_mapinfo[j][3]
 
                 if(goodsignal == False):
-                    while(True):
+                    while(refgap >= 0):
                         if(one_mapinfo[i][2] != one_mapinfo[j][2]):
 
                             break
@@ -13148,7 +13002,6 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_fast_all(o
                         
                         gapcost = abs(readgap - refgap)
 
-                        #if((readgap  > maxgap) or (gapcost > maxdiff)):
                         if((readgap  > gap_arr[one_mapinfo[j][0]]) or (gapcost > maxdiff)):#mark 1                   
                             break
 
@@ -13166,63 +13019,11 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_fast_all(o
                     filtered = False
 
                 if(filtered == True):
-                    #test_scores = S[j] - skipcost + one_mapinfo[i][3]
-                    if(one_mapinfo[i][2] != one_mapinfo[j][2]):
-                        if(one_mapinfo[j][2] == -1):
-                            refgap = one_mapinfo[i][1] - one_mapinfo[j][1]
-                        else:
-                            refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - one_mapinfo[j][1] - one_mapinfo[j][3]
-                    gapcost = abs(readgap - (refgap))#mark 1
-
-                    #test_scores = S[j] - skipcost + one_mapinfo[i][3] - min(gapcost/100, 2 * np.log(gapcost))
+                    gapcost = abs(readgap - refgap)#mark 1
                     test_scores = S[j] - skipcost + one_mapinfo[i][3] -  min(36, 30 + 0.5 * np.log(max(gapcost, 1)), min(10, gapcost/100)+min(30, gapcost/1000))
-
-                    '''if(one_mapinfo[i][2] == one_mapinfo[j][2]):
-                        #test_scores = S[j] - skipcost + one_mapinfo[i][3]
-                        gapcost = abs(readgap - abs(refgap))#mark 1
-                        if(gapcost < 10000):#mark 1
-
-                            test_scores = S[j] - skipcost + one_mapinfo[i][3] - var_gap[gapcost]#mark 1
-                        else:
-                            test_scores = S[j] - skipcost + one_mapinfo[i][3] - 10.#mark 1
-                    else:
-                        test_scores = S[j] - skipcost + one_mapinfo[i][3]'''
-
-                '''if(test_scores > max_scores):
-                    max_scores = test_scores
-                    pre_index = j
-                elif((test_scores == max_scores) and (pre_index != -9999999)):
-                    pre_refdistance = abs(one_mapinfo[i][1] - one_mapinfo[pre_index][1])
-                    now_refdistance = abs(one_mapinfo[i][1] - one_mapinfo[j][1])
-                    if(now_refdistance < pre_refdistance):
-                        max_scores = test_scores
-                        pre_index = j'''
                 if(test_scores > max_scores):
                     max_scores = test_scores
                     pre_index = j
-                    if(one_mapinfo[i][2] != one_mapinfo[j][2]):
-                        T[i] = abs(T[j] - abs(one_mapinfo[i][1] - one_mapinfo[j][1]))
-                    else:
-                        T[i] = T[j]
-
-                elif((test_scores == max_scores) and (pre_index != -9999999)):
-                    if(one_mapinfo[i][2] != one_mapinfo[j][2]):
-                        if(abs(T[j] - abs(one_mapinfo[i][1] - one_mapinfo[j][1])) < T[i]):
-                            T[i] = abs(T[j] - abs(one_mapinfo[i][1] - one_mapinfo[j][1]))
-                            pre_index = j
-                    else:
-                        if(T[j] < T[i]):
-                            T[i] = T[j]
-                            pre_index = j
-
-
-            
-            
-            
-            
-            
-                
-
 
         S[i] = max_scores
         S_i[i] = max_scores
@@ -13232,9 +13033,7 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_fast_all(o
 
             g_max_scores = max_scores
             g_max_index = i
-        elif(max_scores >= g_max_scores):
-            if(T[g_max_index] > T[i]):
-                g_max_index = i
+
         
 
     k = testspace_en
