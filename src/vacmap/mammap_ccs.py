@@ -12201,9 +12201,9 @@ def hit2work_1(one_mapinfo, index2contig, contig2start, testseq_len, skipcost, m
         all_index_List.pop(0)
         return path_list, primary_index_List, primary_scores_List, all_index_List, 0, scores_list
 
-def get_readmap_DP_test(readid, testseq, contig2start, contig2seq, index_object, index2contig, kmersize = 15, local_kmersize = 9, local_maxdiff = 30, refine = True, local_skipcost = 30., golbal_skipcost = (30., 30.),  golbal_maxdiff = (50, 30), check_num = 20, bin_size = 100, hastra = False, debug = False, H = False, mid_occ = -1, redo_ratio = 5, eqx = False):
+def get_readmap_DP_test(readid, testseq, contig2start, contig2seq, index_object, index2contig, kmersize = 15, local_kmersize = 9, local_maxdiff = 30, refine = True, local_skipcost = 50., golbal_skipcost = (30., 30.),  golbal_maxdiff = (50, 30), check_num = 20, bin_size = 100, hastra = False, debug = False, H = False, mid_occ = -1, redo_ratio = 5, eqx = False):
     kmersize = index_object.k
-    local_skipcost = 30.    
+   
     mapq = 60
     setting_kmersize = kmersize
     setting_maxdiff = golbal_maxdiff[1]
