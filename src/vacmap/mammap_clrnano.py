@@ -955,47 +955,7 @@ def testoverlap(alignment_list, iloc):
                 
     return overlapsize
 
-@njit
-def rebuild_chain_break(contig2start, raw_alignment_list, large_cost, small_alignment = 50, small_dup = -100):
-    #rebuild chain break
-    #step 1
-    #remove anchor cause large cost and small alignment
-    preitem = raw_alignment_list[0]
-    alignment_list = List([List([preitem])])
-    for nowitem in raw_alignment_list[1:]:
-        if(preitem[2] == nowitem[2]):
-            readgap = nowitem[0] - preitem[0] - preitem[3]
 
-            if(preitem[2] == 1):
-                refgap = nowitem[1] - preitem[1] - preitem[3]
-            else:
-                refgap = preitem[1]  - nowitem[1] - nowitem[3]
-
-            if((refgap < 0) and (refgap > small_dup)):
-                continue
-            if((abs(readgap - refgap) <= large_cost) and (refgap >= 0) and (readgap < 100)):
-                if(pos2contig(preitem[1], contig2start) == pos2contig(nowitem[1], contig2start)):
-                    alignment_list[-1].append(nowitem)
-                    preitem = nowitem
-                    continue
-
-        if(len(alignment_list[-1]) == 1):
-            alignment_list.pop(-1)
-        if((alignment_list[-1][-1][0] + alignment_list[-1][-1][3] - alignment_list[-1][0][0]) < small_alignment):
-            alignment_list.pop(-1)
-        if(len(alignment_list) > 0):
-            if(len(alignment_list[-1]) >= 4):#
-                alignment_list[-1] = alignment_list[-1][1:-1]
-        alignment_list.append(List([nowitem]))
-        preitem = nowitem
-    if(len(alignment_list[-1]) == 1):
-        alignment_list.pop(-1)
-    if((alignment_list[-1][-1][0] + alignment_list[-1][-1][3] - alignment_list[-1][0][0]) < small_alignment):
-        alignment_list.pop(-1)
-    if(len(alignment_list[-1]) >= 4):
-        alignment_list[-1] = alignment_list[-1][1:-1]
-
-    return alignment_list
 
 @njit
 def rebuild_chain_break_H(contig2start, raw_alignment_list, large_cost, small_alignment = 20, small_dup = -20):
@@ -5258,49 +5218,7 @@ def get_query_target_for_cigar(preitem, nowitem, testseq, rc_testseq, testseq_le
         query = rc_testseq[testseq_len - nowitem[0]: testseq_len - preitem[0]]
         target = contig2seq[testcontig][nowitem[1] + nowitem[3] - refbias: preitem[1] + preitem[3] - refbias]
     return target, query, target_st, target_en, query_st, query_en
-@njit
-def rebuild_chain_break(contig2start, raw_alignment_list, large_cost, small_alignment = 50, small_dup = -100):
-    #rebuild chain break
-    #step 1
-    #remove anchor cause large cost and small alignment
-    preitem = raw_alignment_list[0]
-    alignment_list = List([List([preitem])])
-    for nowitem in raw_alignment_list[1:]:
-        if(preitem[2] == nowitem[2]):
-            readgap = nowitem[0] - preitem[0] - preitem[3]
 
-
-            if(preitem[2] == 1):
-                refgap = nowitem[1] - preitem[1] - preitem[3]
-            else:
-                refgap = preitem[1]  - nowitem[1] - nowitem[3]
-
-            if((refgap < 0) and (refgap > small_dup)):
-                continue
-            if((abs(readgap - refgap) <= large_cost) and (refgap >= 0) and (readgap < 100)):
-                if(pos2contig(preitem[1], contig2start) == pos2contig(nowitem[1], contig2start)):
-                    alignment_list[-1].append(nowitem)
-                    preitem = nowitem
-                    continue
-
-        if(len(alignment_list[-1]) == 1):
-            alignment_list.pop(-1)
-        if(len(alignment_list) > 0):
-            if((alignment_list[-1][-1][0] + alignment_list[-1][-1][3] - alignment_list[-1][0][0]) < small_alignment):
-                alignment_list.pop(-1)
-        if(len(alignment_list) > 0):
-            if(len(alignment_list[-1]) >= 4):#
-                alignment_list[-1] = alignment_list[-1][1:-1]
-        alignment_list.append(List([nowitem]))
-        preitem = nowitem
-    if(len(alignment_list[-1]) == 1):
-        alignment_list.pop(-1)
-    if((alignment_list[-1][-1][0] + alignment_list[-1][-1][3] - alignment_list[-1][0][0]) < small_alignment):
-        alignment_list.pop(-1)
-    if(len(alignment_list[-1]) >= 4):
-        alignment_list[-1] = alignment_list[-1][1:-1]
-
-    return alignment_list
 
 @njit
 def smallorequal2target(arr, target):
@@ -11203,7 +11121,7 @@ def get_list_of_readmap_stdout(raw_queue, cooked_queue, minimap, contig2seq, has
     cache_size = 100
     a_list = []
     st = time.time()
-    redo_ratio = 5
+    redo_ratio = 10
     
     contig2start = Dict()
     index2contig = List()
@@ -11260,6 +11178,8 @@ def get_list_of_readmap_stdout(raw_queue, cooked_queue, minimap, contig2seq, has
             if((tmp_a_list) == None):
                 continue
             else:
+                #if(f_redo_ratio != -1):
+                    #f_redo_ratio_list.append(f_redo_ratio)
                 a_list += tmp_a_list
                 if(len(a_list) > cache_size):
                     cooked_queue.put(a_list)
@@ -11268,6 +11188,9 @@ def get_list_of_readmap_stdout(raw_queue, cooked_queue, minimap, contig2seq, has
                     continue
     if(len(a_list) > 0):
         cooked_queue.put(a_list)
+    #f_redo_ratio_list = np.array(f_redo_ratio_list)
+    #info = 'median: '+ str(np.median(f_redo_ratio_list)) + ' avg: ' + str(f_redo_ratio_list.mean())
+    #logging.info(info)
         
 def get_bam_dict_str(mapinfo, query, qual, contig2iloc, contig2seq, md, shortcs, cigar2cg):
     #'hhk',         ,  '1', '+', 11, 9192, 2767041, 2776138, 60
@@ -11447,17 +11370,17 @@ def decode_hit(index_object, index2contig, testseq, testseq_len, contig2start, k
     maxgap = 1000
     #print_log('len(one_mapinfo)', len(one_mapinfo))
     st = time.time()
-    path_list, primary_index_List, primary_scores_List, all_index_List, mapq, scores_list =  hit2work_1(one_mapinfo, index2contig, contig2start, testseq_len, skipcost, maxdiff, maxgap, check_num, c_bias, bin_size, kmersize, overlapprecentage, hastra, H = H)
+    path_list, primary_index_List, primary_scores_List, all_index_List, mapq, scores_list, factor =  hit2work_1(one_mapinfo, index2contig, contig2start, testseq_len, skipcost, maxdiff, maxgap, check_num, c_bias, bin_size, kmersize, overlapprecentage, hastra, H = H)
     if(len(path_list) == 0):
         scores, path = 0., [(0, 0, 0, 0)]
-        return 0, scores, path, 0
+        return 0, scores, path, factor
     f_redo_ratio = min(abs(testseq_len/(primary_scores_List[0][0]+1e-7)), 20)
     redo_flag = 0
     if(f_redo_ratio > redo_ratio or mapq == 0):
         
         need_reverse, one_mapinfo = get_reversed_chain_numpy_rough(np.array(index_object.map(testseq, check_num = 100, mid_occ = mid_occ)), testseq_len)
         #print_log('len(one_mapinfo)', len(one_mapinfo))
-        path_list, primary_index_List, primary_scores_List, all_index_List, mapq, scores_list =  path_list, primary_index_List, primary_scores_List, all_index_List, mapq, scores_list =  hit2work_1(one_mapinfo, index2contig, contig2start, testseq_len, skipcost, maxdiff, maxgap, check_num, c_bias, bin_size, kmersize, overlapprecentage, hastra, H = H)
+        path_list, primary_index_List, primary_scores_List, all_index_List, mapq, scores_list, factor = hit2work_1(one_mapinfo, index2contig, contig2start, testseq_len, skipcost, maxdiff, maxgap, check_num, c_bias, bin_size, kmersize, overlapprecentage, hastra, H = H)
         redo_flag = 1
     #print_log(scores_list)
     #print_log('hit2work_1', time.time() - st)
@@ -11505,9 +11428,9 @@ def decode_hit(index_object, index2contig, testseq, testseq_len, contig2start, k
         scores, path = 0., [(0, 0, 0, 0)]
     #print_log('edlib', time.time() - st)
     if(need_reverse == True):
-        return mapq, -scores, path, redo_flag
+        return mapq, -scores, path, factor
     else:
-        return mapq, scores, path, redo_flag
+        return mapq, scores, path, factor
 def get_reversed_chain_numpy_force(need_reverse, raw_alignment_array, testseq_len):
 
     if(need_reverse):
@@ -11559,7 +11482,7 @@ def hit2work_1(one_mapinfo, index2contig, contig2start, testseq_len, skipcost, m
     
     fast_enable = False
     g_max_index = 0
-
+    factor = -1.
     for one_mapinfo in cluster_list:
         repeat = False
 
@@ -11567,7 +11490,7 @@ def hit2work_1(one_mapinfo, index2contig, contig2start, testseq_len, skipcost, m
             fast_enable = True
         one_mapinfo = one_mapinfo[np.argsort(one_mapinfo[:,0])]
         if(fast_enable == False):
-            g_max_index, S, P, S_arg = get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_all(one_mapinfo, kmersize = kmersize, skipcost = skipcost[0], maxdiff = maxdiff[0], maxgap = maxgap)
+            g_max_index, S, P, S_arg, factor = get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_all(one_mapinfo, kmersize = kmersize, skipcost = skipcost[0], maxdiff = maxdiff[0], maxgap = maxgap)
         
 
         if(fast_enable == True or g_max_index == -1):
@@ -11693,11 +11616,18 @@ def hit2work_1(one_mapinfo, index2contig, contig2start, testseq_len, skipcost, m
             f2 = primary_scores_List[0][1]
         mapq = min(int(40*(1-f2/f1)*min(1, m/10)*np.log(f1)), 60)
         
-        return path_list, primary_index_List, primary_scores_List, all_index_List, mapq, scores_list
+        return path_list, primary_index_List, primary_scores_List, all_index_List, mapq, scores_list, factor
 
 
 
     else:
+        path_list = List()
+        scores_list = []
+        scores_list.append(0.)
+        scores_list.pop()
+        path_list.append([(0, 0, 0, 0)])
+        path_list.pop()
+        
         primary_scores_List = List()
         primary_scores_List.append(List([0.]))
         primary_scores_List.pop(0)
@@ -11709,9 +11639,9 @@ def hit2work_1(one_mapinfo, index2contig, contig2start, testseq_len, skipcost, m
         all_index_List = List()
         all_index_List.append(List([0]))
         all_index_List.pop(0)
-        return path_list, primary_index_List, primary_scores_List, all_index_List, 0, scores_list
+        return path_list, primary_index_List, primary_scores_List, all_index_List, 0, scores_list, factor
 
-def get_readmap_DP_test(readid, testseq, contig2start, contig2seq, index_object, index2contig, kmersize = 15, local_kmersize = 9, local_maxdiff = 30, refine = True, local_skipcost = 50., golbal_skipcost = (30., 30.),  golbal_maxdiff = (50, 30), check_num = 20, bin_size = 100, hastra = False, debug = False, H = False, mid_occ = -1, redo_ratio = 5, eqx = False):
+def get_readmap_DP_test(readid, testseq, contig2start, contig2seq, index_object, index2contig, kmersize = 15, local_kmersize = 9, local_maxdiff = 30, refine = True, local_skipcost = 50., golbal_skipcost = (30., 30.),  golbal_maxdiff = (50, 30), check_num = 20, bin_size = 100, hastra = False, debug = False, H = False, mid_occ = -1, redo_ratio = 10, eqx = False):
     kmersize = index_object.k
    
     mapq = 60
@@ -11754,10 +11684,10 @@ def get_readmap_DP_test(readid, testseq, contig2start, contig2seq, index_object,
         #need_reverse, raw_alignment_array = get_reversed_chain_numpy_rough(np.array(raw_alignment_list), testseq_len)
         raw_alignment_array = np.array(raw_alignment_list)
         if(need_reverse == False):
-            scores, raw_alignment_list = get_localmap_multi_all_forDP_inv_guide(raw_alignment_array, testseq, rc_testseq, contig2start, contig2seq, kmersize = setting_kmersize, skipcost = local_skipcost, maxdiff = setting_maxdiff, maxgap = 100, shift = 1)
+            scores, raw_alignment_list = get_localmap_multi_all_forDP_inv_guide(raw_alignment_array, testseq, rc_testseq, contig2start, contig2seq, kmersize = setting_kmersize, skipcost = local_skipcost, maxdiff = setting_maxdiff, maxgap = 50, shift = 1)
 
         else:
-            scores, raw_alignment_list = get_localmap_multi_all_forDP_inv_guide(raw_alignment_array, rc_testseq, testseq, contig2start, contig2seq, kmersize = setting_kmersize, skipcost = local_skipcost, maxdiff = setting_maxdiff, maxgap = 100, shift = 1)
+            scores, raw_alignment_list = get_localmap_multi_all_forDP_inv_guide(raw_alignment_array, rc_testseq, testseq, contig2start, contig2seq, kmersize = setting_kmersize, skipcost = local_skipcost, maxdiff = setting_maxdiff, maxgap = 50, shift = 1)
             testseq, rc_testseq = rc_testseq, testseq
             #raw_alignment_list = get_reversed_chain_numpy(np.array(raw_alignment_list), testseq_len)
 
@@ -11773,14 +11703,13 @@ def get_readmap_DP_test(readid, testseq, contig2start, contig2seq, index_object,
         
 
     st = time.time()
-    try:
-        filtered = False
-        #alignment_list, onemapinfolist, TRA_signal = extend_func(List(raw_alignment_list[::-1]), readid, mapq, testseq, rc_testseq, testseq_len, setting_kmersize, pos2contig, contig2start, contig2seq, setting_maxdiff, need_reverse, debug = debug, H = H)
-        alignment_list, onemapinfolist, TRA_signal, filtered = extend_func(List(raw_alignment_list[::-1]), readid, mapq, testseq, rc_testseq, testseq_len, setting_kmersize, pos2contig, contig2start, contig2seq, setting_maxdiff, need_reverse, debug = debug, H = H, nofilter = False, eqx = eqx)
-        if(len(onemapinfolist) == 0):
-            return [], ([], []), 0, redo_flag
-    except:
-        print_log(testseq)
+
+    filtered = False
+    #alignment_list, onemapinfolist, TRA_signal = extend_func(List(raw_alignment_list[::-1]), readid, mapq, testseq, rc_testseq, testseq_len, setting_kmersize, pos2contig, contig2start, contig2seq, setting_maxdiff, need_reverse, debug = debug, H = H)
+    alignment_list, onemapinfolist, TRA_signal, filtered = extend_func(List(raw_alignment_list[::-1]), readid, mapq, testseq, rc_testseq, testseq_len, setting_kmersize, pos2contig, contig2start, contig2seq, setting_maxdiff, need_reverse, debug = debug, H = H, nofilter = False, eqx = eqx)
+    if(len(onemapinfolist) == 0):
+        return [], ([], []), 0, redo_flag
+
     
     
 
@@ -12094,7 +12023,7 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_all(one_ma
         if(prereadloc < one_mapinfo[i][0]):
             
             if((opcount/one_mapinfo[i][0] > 1000) and one_mapinfo[i][0] > 500):#mark 1
-                return -1, S, P, S_arg#mark 1
+                return -1, S, P, S_arg, -1.#mark 1
             
             
             k = testspace_en
@@ -12223,7 +12152,7 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_all(one_ma
     
 
     
-    return g_max_index, S, P, S_arg
+    return g_max_index, S, P, S_arg, opcount/len(one_mapinfo)
 @njit            #one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500
 def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_fast_all(one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500, fast_t = 5):
 
@@ -12558,3 +12487,403 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_fast_all(o
 
     
     return g_max_index, S, P, S_arg
+
+def extend_func(raw_alignment_list, readid, mapq, testseq, rc_testseq, testseq_len, setting_kmersize, pos2contig, contig2start, contig2seq, setting_maxdiff, need_reverse, debug = False, H = False, nofilter = False, eqx = False):
+
+    TRA_signal = False
+    maxdiffratio = 0.2
+    #step 1
+    #rebuild chain break
+    #remove anchor cause large cost and small alignment
+    st = time.time()
+    if(H == False):
+        alignment_list = rebuild_chain_break(contig2start, raw_alignment_list, large_cost = setting_maxdiff, small_alignment = 50, small_dup = -100)
+    else:
+        alignment_list = rebuild_chain_break_H(contig2start, raw_alignment_list, large_cost = setting_maxdiff, small_alignment = 30, small_dup = -30)
+        nofilter = True
+    
+        
+    tmpiloc = -1
+    while((tmpiloc + 1) < len(alignment_list)):
+        tmpiloc += 1
+        preitem, nowitem = alignment_list[tmpiloc][0], alignment_list[tmpiloc][-1]
+        target, query, target_st, target_en, query_st, query_en = get_query_target_for_cigar(preitem, nowitem, testseq, rc_testseq, testseq_len, setting_kmersize, contig2seq, contig2start)
+        diffratio = edlib.align(query = query, target = target, task = 'distance')['editDistance']/min(len(target), len(query))
+        if((diffratio>maxdiffratio)):
+            alignment_list.pop(tmpiloc)
+            tmpiloc -= 1
+            
+    #^print_log('step 1: rebuild chain break ', time.time() - st)
+    if(debug == True):
+        print_log('step 1: rebuild chain break')
+        for line in alignment_list:
+            tempcontig = pos2contig(line[0][1], contig2start)
+            temprefbias = contig2start[tempcontig]
+            preitem, nowitem = line[0], line[-1]
+
+            target, query, target_st, target_en, query_st, query_en = get_query_target_for_cigar(preitem, nowitem, testseq, rc_testseq, testseq_len, setting_kmersize, contig2seq, contig2start)
+
+            print_log(preitem, nowitem)
+            diffratio = edlib.align(query = query, target = target, task = 'distance')['editDistance']/min(len(target), len(query))
+            print_log(line[0][0], line[-1][0], line[0][1] - temprefbias, line[-1][1] - temprefbias, diffratio)
+            plot_result = np.array(line)
+            plt.scatter(plot_result[:,0], plot_result[:,1])
+        plt.show()
+        
+    #step 2
+    #extend edge to recover small dup and misplaced alignment
+    # and also to merge alignment gaped with deletion or insertion
+    st = time.time()
+    extend_edge_test(testseq, testseq_len, alignment_list, setting_kmersize, pos2contig, contig2start, contig2seq, san = 1, debug = debug)
+    if(debug == True):print_log('step 2: extend edge ', time.time() - st)
+    if(debug == True):
+        print_log('After extend edge')
+        for line in alignment_list:
+            tempcontig = pos2contig(line[0][1], contig2start)
+            temprefbias = contig2start[tempcontig]
+            print_log(line[0][0], line[-1][0], line[0][1] - temprefbias, line[-1][1] - temprefbias)
+        
+    #step 3
+    #remove miss placed alignment which cause del/ins or ins/del in start and end
+    st = time.time()
+    
+    o_alignment_list_len = len(alignment_list)
+    filtered = False
+    if((len(alignment_list) > 2) and (nofilter == False)):    
+        iloc = 0
+        while(iloc < (len(alignment_list) - 2)):
+            removed = drop_misplaced_alignment_test(alignment_list, iloc, debug = debug)
+            if(removed == True):
+                continue
+            else:
+                iloc += 1
+                
+    
+        #extend_edge_drop_test(testseq, testseq_len, alignment_list, setting_kmersize, pos2contig, contig2start, contig2seq, san = 1, debug = debug)
+        
+    if(debug == True):print_log('step 3: remove miss placed alignment ', time.time() - st)
+    if(debug == True):
+        print_log('After remove miss placed alignment')
+        for line in alignment_list:
+            tempcontig = pos2contig(line[0][1], contig2start)
+            temprefbias = contig2start[tempcontig]
+            print_log(line[0][0], line[-1][0], line[0][1] - temprefbias, line[-1][1] - temprefbias)
+            plot_result = np.array(line)
+            plt.scatter(plot_result[:,0], plot_result[:,1])
+        plt.show()
+            
+
+            
+    
+    if(len(alignment_list) <  o_alignment_list_len):#fill the gap
+        filtered = True
+        st = time.time()
+        extend_edge_test(testseq, testseq_len, alignment_list, setting_kmersize, pos2contig, contig2start, contig2seq, san = 1, debug = debug)
+        if(debug == True):print_log('step 4: fill the gap by extend edge ', time.time() - st)
+        if(debug == True):
+            print_log('After extend edge')
+            for line in alignment_list:
+                tempcontig = pos2contig(line[0][1], contig2start)
+                temprefbias = contig2start[tempcontig]
+                print_log(line[0][0], line[-1][0], line[0][1] - temprefbias, line[-1][1] - temprefbias)
+
+        
+    #step 4
+    #merge conjacent alignment with small readgap or refgap
+    st = time.time()
+    merge_smallgap = 2000
+    too_large_gap = 5000
+    if(len(alignment_list) >= 2):
+        iloc = 0
+        duplist = getdupiloc(alignment_list)
+        while((iloc + 1) < len(alignment_list)):
+            if(iloc in duplist):
+                iloc += 1
+                continue
+            
+            preitem = alignment_list[iloc][-1]
+            nowitem = alignment_list[iloc + 1][0]
+            if(preitem[2] != nowitem[2] or (pos2contig(preitem[1], contig2start) != pos2contig(nowitem[1], contig2start))):
+                iloc += 1
+                continue
+            presize = alignment_list[iloc][-1][0] + alignment_list[iloc][-1][3] - alignment_list[iloc][0][0]
+            nowsize = alignment_list[iloc + 1][-1][0] + alignment_list[iloc + 1][-1][3] - alignment_list[iloc + 1][0][0]
+            
+            if(alignment_list[iloc][-1][2] == 1):
+                ref_presize = alignment_list[iloc][-1][1] + alignment_list[iloc][-1][3] - alignment_list[iloc][0][1]
+            else:
+                ref_presize = alignment_list[iloc][0][1] + alignment_list[iloc][0][3] - alignment_list[iloc][-1][1]
+            if(alignment_list[iloc+1][-1][2] == 1):
+                ref_nowsize = alignment_list[iloc+1][-1][1] + alignment_list[iloc+1][-1][3] - alignment_list[iloc+1][0][1]
+            else:
+                ref_nowsize = alignment_list[iloc+1][0][1] + alignment_list[iloc+1][0][3] - alignment_list[iloc+1][-1][1]
+                
+            readgap = nowitem[0] - preitem[0] - preitem[3]
+            if(preitem[2] == 1):
+                refgap = nowitem[1] - preitem[1] - preitem[3]
+
+            else:
+                refgap = preitem[1]  - nowitem[1] - nowitem[3]                        
+            if(refgap < 0):
+                iloc += 1
+                continue
+            #if((min(readgap, refgap) < merge_smallgap) and (max(readgap, refgap) < too_large_gap)):
+            #if((((min(presize, nowsize) > 500) or ((abs(readgap - refgap) / min(presize, nowsize)) < 0.5)) and (max(readgap, refgap) < 20000))):
+            if((min(readgap, refgap) < 50) and (abs(readgap - refgap) < 2000)):
+                alignment_list[iloc] = List_merge((alignment_list[iloc], alignment_list[iloc + 1]))
+                alignment_list.pop(iloc+1)
+            else:
+                iloc += 1
+    if(debug == True):print_log('step 4: merge conjacent alignment ', time.time() - st)
+    if(debug == True):
+        print_log('After merge conjacent alignment')
+        for line in alignment_list:
+            tempcontig = pos2contig(line[0][1], contig2start)
+            temprefbias = contig2start[tempcontig]
+            print_log(line[0][0], line[-1][0], line[0][1] - temprefbias, line[-1][1] - temprefbias)
+    
+    #step 5
+    #split unrelate read
+    #note inside alignment there is no way two conjacent anchors
+    #has cost large than 30
+    #so there is no big gap
+    st = time.time()
+    new_alignment_list = List()
+    cigarlist = []
+    for alignment in alignment_list: 
+
+        tmp_alignment_list, tmp_cigarlist = split_alignment_test(alignment, testseq, rc_testseq, testseq_len, kmersize=setting_kmersize , contig2seq = contig2seq, contig2start = contig2start, debug = debug, H = H, eqx = eqx)
+        if(debug): print_log(len(tmp_alignment_list), len(tmp_cigarlist))
+        iloc = -1
+        for alignment in tmp_alignment_list:
+            iloc += 1
+            new_alignment_list.append(alignment)
+            cigarlist.append(tmp_cigarlist[iloc])
+
+
+    if(debug == True):print_log('step 5: split unrelate read ', time.time() - st)
+    if(debug == True):
+        print_log('After split unrelate read')
+        for line in new_alignment_list:
+            tempcontig = pos2contig(line[0][1], contig2start)
+            temprefbias = contig2start[tempcontig]
+            print_log(line[0][0], line[-1][0], line[0][1] - temprefbias, line[-1][1] - temprefbias)
+    
+    alignment_list, onemapinfolist = get_onemapinfolist(new_alignment_list, cigarlist, readid, mapq, testseq_len, contig2start, need_reverse)
+    return alignment_list, onemapinfolist, TRA_signal, filtered
+@njit
+def rebuild_chain_break(contig2start, raw_alignment_list, large_cost, small_alignment = 50, small_dup = -100):
+    #rebuild chain break
+    #step 1
+    #remove anchor cause large cost and small alignment
+    preitem = raw_alignment_list[0]
+    alignment_list = List([List([preitem])])
+    for nowitem in raw_alignment_list[1:]:
+        if(preitem[2] == nowitem[2]):
+            readgap = nowitem[0] - preitem[0] - preitem[3]
+
+
+            if(preitem[2] == 1):
+                refgap = nowitem[1] - preitem[1] - preitem[3]
+            else:
+                refgap = preitem[1]  - nowitem[1] - nowitem[3]
+
+
+            if((abs(readgap - refgap) <= large_cost) and (refgap >= 0) and (readgap < 100)):
+                if(pos2contig(preitem[1], contig2start) == pos2contig(nowitem[1], contig2start)):
+                    alignment_list[-1].append(nowitem)
+                    preitem = nowitem
+                    continue
+
+        if(len(alignment_list[-1]) == 1):
+            alignment_list.pop(-1)
+        if(len(alignment_list) > 0):
+            if((alignment_list[-1][-1][0] + alignment_list[-1][-1][3] - alignment_list[-1][0][0]) < small_alignment):
+                alignment_list.pop(-1)
+  
+        alignment_list.append(List([nowitem]))
+        preitem = nowitem
+    if(len(alignment_list[-1]) == 1):
+        alignment_list.pop(-1)
+    if((alignment_list[-1][-1][0] + alignment_list[-1][-1][3] - alignment_list[-1][0][0]) < small_alignment):
+        alignment_list.pop(-1)
+
+
+    return alignment_list
+@njit
+def get_localmap_multi_all_forDP_inv_guide(raw_alignment_array, testseq, rc_testseq, contig2start, contig2seq, kmersize, skipcost, maxdiff, maxgap, shift = 1):#
+    
+
+
+
+
+    def seq2hashtable_multi_test(onelookuptable, seq, start, kmersize):
+        skiphash = hash('N'*kmersize)
+        for iloc in range(0, len(seq) - kmersize + 1, 1):
+            hashedkmer = hash(seq[iloc:iloc+kmersize])
+            if(skiphash == hashedkmer):
+                continue
+            if(hashedkmer in onelookuptable):
+
+                onelookuptable[hashedkmer].append(start + iloc)
+            else:
+                onelookuptable[hashedkmer] = List([start + iloc])
+
+    readgap = 0
+    pre = raw_alignment_array[0]
+    for now in raw_alignment_array[1:]:
+        if(abs(now[0] - pre[0]) > readgap):
+            readgap = abs(now[0] - pre[0])
+        pre = now
+    readgap += 1000  
+    readgap = max(readgap, 5000)
+    raw_alignment_array = raw_alignment_array[np.argsort(raw_alignment_array[:, 1])]
+    startandend = List([(raw_alignment_array[0][1], raw_alignment_array[0][1])])
+    for item in raw_alignment_array[1:]:
+        if(((item[1] - startandend[-1][1]) < readgap)):
+            startandend[-1] = (startandend[-1][0], item[1])
+        else:
+            if(startandend[-1][0] == startandend[-1][1]):
+                startandend.pop(-1)
+            startandend.append((item[1], item[1]))
+    if(startandend[-1][0] == startandend[-1][1]):
+        startandend.pop(-1)
+    local_lookuptable = Dict()
+    local_lookuptable[0] = List([0])
+    
+    retry_diffcontig = False
+    for item in startandend:
+        min_ref, max_ref = item[0], item[1]
+        testcontig = pos2contig(min_ref, contig2start)
+        if(testcontig != pos2contig(max_ref, contig2start)):
+            retry_diffcontig = True
+            break
+        lookfurther = min(2000, min_ref-contig2start[testcontig])
+        min_ref -= lookfurther
+        max_ref += 2000
+        refseq = contig2seq[testcontig][min_ref-contig2start[testcontig]: max_ref-contig2start[testcontig]]
+        seq2hashtable_multi_test(local_lookuptable, refseq, min_ref, kmersize)
+    local_lookuptable.pop(0)
+    if(retry_diffcontig == True):
+        startandend = List([(raw_alignment_array[0][1], raw_alignment_array[0][1])])
+        current_contig = pos2contig(raw_alignment_array[0][1], contig2start)
+        for item in raw_alignment_array[1:]:
+            if(((item[1] - startandend[-1][1]) < readgap) and (current_contig == pos2contig(item[1], contig2start))):
+                startandend[-1] = (startandend[-1][0], item[1])
+            else:
+                if(startandend[-1][0] == startandend[-1][1]):
+                    startandend.pop(-1)
+                startandend.append((item[1], item[1]))
+                current_contig = pos2contig(item[1], contig2start)
+        if(startandend[-1][0] == startandend[-1][1]):
+            startandend.pop(-1)
+        local_lookuptable = Dict()
+        local_lookuptable[0] = List([0])
+
+        retry_diffcontig = False
+        for item in startandend:
+            min_ref, max_ref = item[0], item[1]
+            testcontig = pos2contig(min_ref, contig2start)
+            if(testcontig != pos2contig(max_ref, contig2start)):
+                retry_diffcontig = True
+                break
+            lookfurther = min(2000, min_ref-contig2start[testcontig])
+            min_ref -= lookfurther
+            max_ref += 2000
+            refseq = contig2seq[testcontig][min_ref-contig2start[testcontig]: max_ref-contig2start[testcontig]]
+            seq2hashtable_multi_test(local_lookuptable, refseq, min_ref, kmersize)
+        local_lookuptable.pop(0)
+        
+    raw_alignment_array = raw_alignment_array[np.argsort(raw_alignment_array[:, 0])]
+    readstart = max(0, raw_alignment_array[0][0]-500)
+    readend = min(len(testseq)-kmersize+1, raw_alignment_array[-1][0]+500)
+
+    
+    
+    iloc = readstart
+    iloc -= shift
+    
+    maxop = 0
+    pointdict = Dict()
+    
+    while(True):
+   
+        iloc += shift
+        if(iloc >= readend):
+            break
+
+        if(hash(testseq[iloc: iloc + kmersize]) == hash(rc_testseq[-(iloc + kmersize): -iloc])):
+            continue
+        biasvalue, biasvalue_1, closest_index, closest_index_1 = findClosest(raw_alignment_array, target = iloc)
+
+
+        interval = min(biasvalue + biasvalue_1 + 500, 2000)
+        upperrefloc =  (raw_alignment_array[closest_index][1] + interval, raw_alignment_array[closest_index_1][1] + interval)
+        lowerrefloc =  (raw_alignment_array[closest_index][1] - interval, raw_alignment_array[closest_index_1][1] - interval)
+        readgap = abs(iloc - raw_alignment_array[closest_index][0])
+   
+        hashedkmer = hash(testseq[iloc: iloc + kmersize])  
+        if(hashedkmer in local_lookuptable):
+            for refloc in local_lookuptable[hashedkmer]:
+                refgap = abs(refloc - raw_alignment_array[closest_index][1])
+                diff = abs(readgap - refgap)
+                if((diff < 500) or (upperrefloc[0] >= refloc and lowerrefloc[0] <= refloc) or (upperrefloc[1] >= refloc and lowerrefloc[1] <= refloc)):
+                    item = (iloc, refloc, 1)
+                    point = item[1] - item[0]
+
+                    if(point in pointdict):
+
+                        if((pointdict[point][-1][0] + pointdict[point][-1][3]) >= item[0]):
+                            bouns = item[0] - (pointdict[point][-1][0] + pointdict[point][-1][3]) + kmersize
+                            if(bouns > 0):
+                                if((pointdict[point][-1][3] + bouns < 20)):
+                                    pointdict[point][-1] = (pointdict[point][-1][0], pointdict[point][-1][1], 1, pointdict[point][-1][3] + bouns)
+                                else:
+                                    pointdict[point].append((pointdict[point][-1][0] + pointdict[point][-1][3], pointdict[point][-1][1] + pointdict[point][-1][3], 1, bouns))
+                          
+
+
+                        else:    
+                            pointdict[point].append((item[0], item[1], item[2], kmersize))
+                    else:
+                        pointdict[point] = List([(item[0], item[1], item[2], kmersize)])
+
+
+        hashedkmer = hash(rc_testseq[-(iloc + kmersize): -iloc]) 
+        if(hashedkmer in local_lookuptable):
+
+            for refloc in local_lookuptable[hashedkmer]:
+                refgap = abs(refloc - raw_alignment_array[closest_index][1])
+                diff = abs(readgap - refgap)
+                if((diff < 500) or (upperrefloc[0] >= refloc and lowerrefloc[0] <= refloc) or (upperrefloc[1] >= refloc and lowerrefloc[1] <= refloc)):
+                    item = (iloc, refloc, -1)
+                    point = -(item[1] + item[0])
+                    if(point in pointdict):
+
+                        if((pointdict[point][-1][0] + pointdict[point][-1][3]) >= item[0]):
+                            bouns = item[0] - (pointdict[point][-1][0] + pointdict[point][-1][3]) + kmersize
+                            if(bouns > 0):
+                                if((pointdict[point][-1][3] + bouns < 20)):
+                                    pointdict[point][-1] = (pointdict[point][-1][0], item[1], -1, pointdict[point][-1][3] + bouns)
+                                else:
+
+                                    pointdict[point].append((pointdict[point][-1][0] + pointdict[point][-1][3], item[1], -1, bouns))
+                                        #print_log(pointdict[point][-1])
+
+
+                        else:    
+                            pointdict[point].append((item[0], item[1], item[2], kmersize))
+                    else:
+                        pointdict[point] = List([(item[0], item[1], item[2], kmersize)])
+    
+    one_mapinfo = [(-1, -1, -1, -1)]
+    one_mapinfo.pop(0)
+    for key in pointdict:
+        for item in pointdict[key]:
+            one_mapinfo.append(item)
+    one_mapinfo = np.array(one_mapinfo)
+    one_mapinfo = one_mapinfo[np.argsort(one_mapinfo[:, 0])]
+  
+
+
+    return get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list(one_mapinfo, kmersize = kmersize, skipcost = skipcost, maxdiff = maxdiff, maxgap = maxgap)
