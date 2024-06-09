@@ -1,5 +1,5 @@
 '''   
- * @Title: MAMnet 
+ * @Title: VACmap 
  * @author: Ding Hongyu
  * @date: 12 6 2023
  * @version V1.0.1
@@ -272,33 +272,48 @@ else:
             unique_set = set()
             logging.info('Reading ' + fastapath)
             if('bam' == fastapath[-3:]):
-                bamfile = pysam.AlignmentFile(fastapath,'rb')
+                bamfile = pysam.AlignmentFile(fastapath, check_sq=False)
                 for rec in bamfile:
 
-                    name = rec.query_name
-                    seq = rec.query_sequence.upper()
-                    if(type(seq) != str):
-                        continue
-                    if(rec.is_reverse == True):
-                        seq = str(Seq(seq).reverse_complement())
-                    if(hash(name) in unique_set):
+                    try:
+                        name = rec.query_name
+                        
+                        if(hash(name) in unique_set):
+                            continue
+                        seq = rec.query_sequence.upper()
+                        if(rec.is_reverse == True):
+                            seq = str(Seq(seq).reverse_complement())
+                    except:
+                        logging.error('Failed to decode one read sequence, continue anyway.')
                         continue
                     unique_set.add(hash(name))
                     count += 1
 
 
-                    if(raw_queue.full() == False):
-                        raw_queue.put((name, seq, None))
-                    else:
-                        time.sleep(1)
+                    raw_queue.put((name, seq, None))
+                    if(count % 100000 == 0):
+                        c_time = time.time()
+
+                        tmptime = c_time - tmp_st
+                        t_time = c_time - st
+
+
+                        logging.info(str(round((count - tmp_count) / tmptime)) + ' / sec in the last ' + str(max(round(tmptime/60), 1)) + ' minutes, ' + str(round(count / t_time)) + ' / sec AVG')
+                        tmp_st = c_time
+                        tmp_count = count
             else:
                 for rec in mp.fastx_read(fastapath):
-
-                    name = rec[0]
-                    if(hash(name) in unique_set):
+                
+                    try:
+                        name = rec[0]
+                        if(hash(name) in unique_set):
+                            continue
+                        seq = rec[1].upper()
+                    except:
+                        logging.error('Failed to decode one read sequence, continue anyway.')
                         continue
+                        
                     unique_set.add(hash(name))
-                    seq = rec[1].upper()
                     count += 1
 
                     raw_queue.put((name, seq, rec[2]))
@@ -316,7 +331,13 @@ else:
 
 
 
+        c_time = time.time()
 
+        tmptime = c_time - tmp_st
+        t_time = c_time - st
+
+
+        logging.info(str(round((count - tmp_count) / tmptime)) + ' / sec in the last ' + str(max(round(tmptime/60), 1)) + ' minutes, ' + str(round(count / t_time)) + ' / sec AVG')
         for i in range(n):
             raw_queue.put(i)
         for one_process in process_list:
