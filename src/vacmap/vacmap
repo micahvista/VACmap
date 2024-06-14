@@ -155,7 +155,11 @@ if('w' not in pdict):
     pdict['w'] = '10'
 else:
     pdict['w'] = str(pdict['w'])
-logging.info('Minimizer window size: ' + pdict['w'])
+if('c' not in pdict):
+    pdict['c'] = 20
+else:
+    pdict['c'] = int(pdict['c'])
+logging.info('Top N clusters: ' + str(pdict['c']))
 
 if(hit == True):
     print('Usage')
