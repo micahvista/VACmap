@@ -218,7 +218,7 @@ cdef class Aligner:
 		km = cmappy.mm_tbuf_get_km(b._b)
 		_seq = seq if isinstance(seq, bytes) else seq.encode()
 		aa = cmappy.mm_map_aux(self._idx, _seq, NULL,  &n_regs, b._b, &map_opt, &n_aa)
-		kmersize = self.idx_opt.k
+		kmersize = int(self._idx.k)
 		ee = []
 		for i in range(n_aa):
 			if(aa[i].x < 0):
