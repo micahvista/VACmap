@@ -12887,3 +12887,124 @@ def get_localmap_multi_all_forDP_inv_guide(raw_alignment_array, testseq, rc_test
 
 
     return get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list(one_mapinfo, kmersize = kmersize, skipcost = skipcost, maxdiff = maxdiff, maxgap = maxgap)
+
+@njit
+def smallorequal2target_1d_point(arr, target, n, point):
+    if(target < arr[point[0]]):
+        return -1
+
+    if(target >= arr[point[n - 1]]):
+        return n-1
+
+    i = 0
+    j = n
+    mid = 0
+    while(i < j):
+        mid = (i + j) // 2
+
+        if(target == arr[point[mid]]):
+            if(mid < n - 1):
+                if(arr[point[mid+1]] > target):
+                    return mid
+                else:
+                    i = mid + 1
+            else:
+                return mid
+
+        elif(target < arr[point[mid]]) :
+
+            if(mid > 0 and target >= arr[point[mid - 1]]):
+                return mid-1
+
+            j = mid
+
+        else: # target>arr[mid][0]
+            if(mid < n - 1 and target < arr[point[mid + 1]]):
+                return mid
+
+            i = mid + 1
+
+    return mid
+@njit
+def closest2target_1d_point_pos_colinear(arr, target, st, en, point, pos, pos_arr, maxdiff):
+    if(target < arr[point[st]]):
+        return st
+
+    if(target > arr[point[en - 1]]):
+        
+        return en-1
+
+    i = st
+    j = en
+    mid = st
+    while(i < j):
+        mid = (i + j) // 2
+
+        if(target == arr[point[mid]]):
+            if(pos_arr[point[mid]] < pos):
+                if(mid + 1 < en):
+                    if(target == arr[point[mid + 1]]):
+                        if(pos_arr[point[mid + 1]] > pos):
+                            if(pos - pos_arr[point[mid]] < pos_arr[point[mid + 1]] - pos):
+                                return mid
+                            else:
+                                return mid + 1
+                        else:#pos > pos_arr[point[mid + 1]]
+                            i = mid + 1
+                    else:
+                        return mid
+                else:
+                    return mid
+            else:#pos_arr[point[mid]] > pos
+                if(mid > st):
+                    if(target == arr[point[mid - 1]]):
+                        if(pos > pos_arr[point[mid - 1]]):
+                            if(pos - pos_arr[point[mid - 1]] < pos_arr[point[mid]] - pos):
+                                return mid - 1
+                            else:
+                                return mid
+                        else:#pos < pos_arr[point[mid - 1]]
+                            j = mid
+                    else:
+                        return mid
+                else:
+                    return mid
+                
+                
+            
+            
+            
+
+        elif(target < arr[point[mid]]) :
+            
+            if(mid > st_loc and target >= arr[point[mid - 1]]):
+                if(min(target - arr[point[mid - 1]], arr[point[mid]] - target) > maxdiff):
+                    if(target - arr[point[mid - 1]] < arr[point[mid]] - target):
+                        return mid-1
+                    else:
+                        return mid
+                else:
+                    if(target > 0):
+                        return mid
+                    else:#target < 0
+                        return mid - 1
+
+            j = mid
+
+        else: # target>arr[point[mid]]
+
+            if(mid < en_loc - 1 and target < arr[point[mid + 1]]):
+                if(min(arr[point[mid + 1]] - target, target - arr[point[mid]]) > maxdiff):
+                    if(arr[point[mid + 1]] - target > target - arr[point[mid]]):
+                        return mid
+                    else:
+                        return mid + 1
+                else:
+                    if(target > 0):
+                        return mid + 1
+                    else:
+                        return mid
+
+            i = mid + 1
+
+    return mid
