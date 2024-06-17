@@ -1,7 +1,7 @@
 '''   
  * @Title: VACmap 
  * @author: Ding Hongyu
- * @date: 2 11 2024
+ * @date: 17 6 2024
  * @version V1.0.0
 '''
 import edlib
