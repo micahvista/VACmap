@@ -92,6 +92,8 @@ for item in pstring[1:]:
                 pdict['cigar2cg'] = True
             elif(op == 'eqx'):
                 pdict['eqx'] = True
+            else:
+                pdict[op] = True
                    
         else:
             op = item[1:]
@@ -137,29 +139,80 @@ else:
         hit = True
     else:
         logging.info('Mode: ' + pdict['mode'])
-    
+        
+if('maxdivergence' not in pdict):
+    if(pdict['mode'] == 'L'):
+        pdict['local_skipcost'] = 59.
+        pdict['maxdivergence'] = 0.1
+    else:
+        pdict['local_skipcost'] = 40.
+        pdict['maxdivergence'] = 0.2
+else:
+    pdict['maxdivergence'] = float(pdict['maxdivergence'])
+logging.info('Max sequence divergence: ' + str(pdict['maxdivergence']) + ' [-maxdivergence ' + str(pdict['maxdivergence'])+']')    
 if('t' not in pdict):
     pdict['t'] = 8
 else:
     pdict['t'] = int(pdict['t'])
-
-logging.info('Threads: ' + str(pdict['t']))
+logging.info('Threads: ' + str(pdict['t']) + ' [-t ' + str(pdict['t'])+']')
     
 if('k' not in pdict):
     pdict['k'] = '15'
 else:
     pdict['k'] = str(pdict['k'])
-logging.info('Kmer size: ' + pdict['k'])
+logging.info('Kmer size: ' + pdict['k'] + ' [-k ' + str(pdict['k'])+']')
     
 if('w' not in pdict):
     pdict['w'] = '10'
 else:
     pdict['w'] = str(pdict['w'])
+logging.info('Minimizer window size: ' + pdict['w'] + ' [-w ' + str(pdict['w'])+']')
+
 if('c' not in pdict):
-    pdict['c'] = 20
+    pdict['c'] = 100
 else:
     pdict['c'] = int(pdict['c'])
-logging.info('Top N clusters: ' + str(pdict['c']))
+logging.info('Top N clusters: ' + str(pdict['c']) + ' [-c ' + str(pdict['c'])+']')
+
+if('markunbalancetra' not in pdict):
+    pdict['markunbalancetra'] = False
+else:
+    pdict['markunbalancetra'] = True
+logging.info('Set the MAPQ of the unbalanced translocation subalignment to 1: ' + str(pdict['markunbalancetra']) + ' [--markunbalancetra]')
+
+if('nodiscard' not in pdict):
+    pdict['nodiscard'] = False
+else:
+    pdict['nodiscard'] = True
+logging.info('Remove subalignments where the surrounding deletion and insertion have similar sizes: ' + str(pdict['nodiscard'] == False) + ' [--nodiscard]')
+
+if('golbalpenalty' not in pdict):
+    pdict['golbal_skipcost'] = 45.
+else:
+    pdict['golbal_skipcost'] = float(pdict['golbalpenalty'])
+logging.info('Golbal variation penalty: ' + str(pdict['golbal_skipcost']) + ' [-golbalpenalty ' + str(pdict['golbal_skipcost'])+']')
+
+if('localpenalty' not in pdict):
+    pdict['local_skipcost'] = float(pdict['localpenalty'])
+logging.info('Local variation penalty: ' + str(pdict['local_skipcost']) + ' [-localpenalty ' + str(pdict['local_skipcost'])+']')
+
+if('golbalmaxdiff' not in pdict):
+    pdict['golbal_maxdiff'] = 50
+else:
+    pdict['golbal_maxdiff'] = int(pdict['golbalmaxdiff'])
+logging.info('Golbal max diff: ' + str(pdict['golbal_maxdiff']) + ' [-golbalmaxdiff ' + str(pdict['golbal_maxdiff'])+']')
+
+if('localmaxdiff' not in pdict):
+    pdict['local_maxdiff'] = 30
+else:
+    pdict['local_maxdiff'] = int(pdict['localmaxdiff'])
+logging.info('Local max diff: ' + str(pdict['local_maxdiff']) + ' [-localmaxdiff ' + str(pdict['local_maxdiff'])+']')
+
+if('debug' not in pdict):
+    pdict['debug'] = False
+else:
+    pdict['debug'] = True
+logging.info('Debug: ' + str(pdict['debug']) + ' [--debug]')
 
 if(hit == True):
     print('Usage')
@@ -238,8 +291,8 @@ else:
         setting_kmersize = 9
         readid = 'hhk'
         try:
-            onemapinfolist, (alignment_list,raw_alignment_list), one_mapinfo, f_redo_ratio = mammap.get_readmap_DP_test(readid, str(Seq(testseq).reverse_complement()),  contig2start, contig2seq, index_object, index2contig, hastra = True, refine = True, debug = False, H = H)  
-        except:
+            onemapinfolist, (alignment_list,raw_alignment_list), one_mapinfo, f_redo_ratio = mammap.get_readmap_DP_test(readid, str(Seq(testseq).reverse_complement()),  contig2start, contig2seq, index_object, index2contig, pdict, hastra = True, refine = True, debug = False, H = H)  
+        except Exception as error:
             pass
 
 
