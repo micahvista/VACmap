@@ -192,7 +192,7 @@ else:
     pdict['golbal_skipcost'] = float(pdict['golbalpenalty'])
 logging.info('Golbal variation penalty: ' + str(pdict['golbal_skipcost']) + ' [-golbalpenalty ' + str(pdict['golbal_skipcost'])+']')
 
-if('localpenalty' not in pdict):
+if('localpenalty' in pdict):
     pdict['local_skipcost'] = float(pdict['localpenalty'])
 logging.info('Local variation penalty: ' + str(pdict['local_skipcost']) + ' [-localpenalty ' + str(pdict['local_skipcost'])+']')
 
