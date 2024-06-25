@@ -214,6 +214,13 @@ else:
     pdict['debug'] = True
 logging.info('Debug: ' + str(pdict['debug']) + ' [--debug]')
 
+if('nowriteindex' not in pdict):
+    pdict['nowriteindex'] = False
+else:
+    pdict['nowriteindex'] = True
+logging.info('No saving the reference index for reuse: ' + str(pdict['nowriteindex']) + ' [--nowriteindex]')
+
+
 if(hit == True):
     print('Usage')
     print('vacmap -ref /ref.fasta -read /read.fasta -mode H|L -t 8 [--eqx] [--MD] [--cs] [--L]')
@@ -245,17 +252,18 @@ else:
         
                     
     refpath = pdict['ref']
-    if((os.path.isfile(refpath+"_w"+pdict['w']+"_k"+pdict['k']+".mmi") == False)):
-        if(('mmi' != refpath[-3:])):
-            logging.info("Using minimap2 to build reference index")
-            import subprocess
-            subprocess.run(["minimap2", "-d", refpath+"_w"+pdict['w']+"_k"+pdict['k']+".mmi", refpath, "-w", pdict['w'], "-k", pdict['k']]) 
+    if(pdict['nowriteindex'] == False):
+        if((os.path.isfile(refpath+"_w"+pdict['w']+"_k"+pdict['k']+".mmi") == False)):
+            if(('mmi' != refpath[-3:])):
+                logging.info("Using minimap2 to build reference index")
+                import subprocess
+                subprocess.run(["minimap2", "-d", refpath+"_w"+pdict['w']+"_k"+pdict['k']+".mmi", refpath, "-w", pdict['w'], "-k", pdict['k']]) 
+                refpath = refpath+"_w"+pdict['w']+"_k"+pdict['k']+".mmi"
+                if(os.path.isfile(refpath) == False):
+                    logging.error("Failed to build reference index")
+                    hit = True
+        else:
             refpath = refpath+"_w"+pdict['w']+"_k"+pdict['k']+".mmi"
-            if(os.path.isfile(refpath) == False):
-                logging.error("Failed to build reference index")
-                hit = True
-    else:
-        refpath = refpath+"_w"+pdict['w']+"_k"+pdict['k']+".mmi"
     if(hit == False):
         pdict['ref'] = refpath
 
@@ -265,7 +273,7 @@ else:
         readpath = pdict['read']
         max_worker = pdict['t']
 
-        index_object = mp.Aligner(refpath)  # load index
+        index_object = mp.Aligner(refpath, w = int(pdict['w']), k = int(pdict['k']))  # load index
 
         if not index_object: raise Exception("ERROR: failed to load index")
         contig2start = Dict()
