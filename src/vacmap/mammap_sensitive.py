@@ -13916,9 +13916,7 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_all(one_ma
 def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_fast_all(one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500, fast_t = 5):
 
     
-    oskipcost = skipcost
-    omaxdiff = maxdiff
-    repeat_weight = 20
+
 
     
     gap_arr = np.empty(one_mapinfo[-1][0])#mark 1
@@ -13949,12 +13947,11 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_fast_all(o
     
     
 
-    coverage_dict = np.zeros(one_mapinfo[-1][0] + 1, np.int64)
+
     readlength = one_mapinfo[-1][0] + 1000
     target_arr = np.zeros(n, dtype = np.float64)
     for i in range(n):
 
-        coverage_dict[one_mapinfo[i][0]] = min(coverage_dict[one_mapinfo[i][0]]+1, repeat_weight)
         if(one_mapinfo[i][2] == 1):
             target_arr[i] = one_mapinfo[i][1] - one_mapinfo[i][0] + readlength 
         else:
@@ -13963,8 +13960,7 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_fast_all(o
 
     
     prereadloc = one_mapinfo[0][0]
-    skipcost = oskipcost + coverage_dict[one_mapinfo[0][0]]
-    maxdiff = max(omaxdiff - coverage_dict[one_mapinfo[0][0]], 10)
+
     
     testspace = np.empty(0, np.int64)
     testspace_en = 1
@@ -14035,8 +14031,6 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_fast_all(o
             gap_arr[prereadloc] = maxgap + 2*(one_mapinfo[i][0] - prereadloc)#mark 1
             
             
-            skipcost = oskipcost + coverage_dict[one_mapinfo[i][0]]
-            maxdiff = max(omaxdiff - coverage_dict[one_mapinfo[i][0]], 10)
             
             prereadloc = one_mapinfo[i][0]
             
@@ -14250,9 +14244,7 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_fast_all(o
 def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_all(one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500):
 
     
-    oskipcost = skipcost
-    omaxdiff = maxdiff
-    repeat_weight = 20
+
 
     
     gap_arr = np.empty(one_mapinfo[-1][0])#mark 1
@@ -14285,16 +14277,12 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_all(one_ma
     
     
 
-    coverage_dict = np.zeros(one_mapinfo[-1][0] + 1, np.int64)
-    for i in range(n):
 
-        coverage_dict[one_mapinfo[i][0]] = min(coverage_dict[one_mapinfo[i][0]]+1, repeat_weight)
             
 
     
     prereadloc = one_mapinfo[0][0]
-    skipcost = oskipcost + coverage_dict[one_mapinfo[0][0]]
-    maxdiff = max(omaxdiff - coverage_dict[one_mapinfo[0][0]], 10)
+
     
     testspace = np.empty(0, np.int64)
 
@@ -14353,8 +14341,6 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_all(one_ma
             gap_arr[prereadloc] = maxgap + 2*(one_mapinfo[i][0] - prereadloc)#mark 1
             
             
-            skipcost = oskipcost + coverage_dict[one_mapinfo[i][0]]
-            maxdiff = max(omaxdiff - coverage_dict[one_mapinfo[i][0]], 10)
             
             prereadloc = one_mapinfo[i][0]
             
@@ -14468,9 +14454,6 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_all(one_ma
 def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list(one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500):
 
     
-    oskipcost = skipcost
-    omaxdiff = maxdiff
-    repeat_weight = 20
 
     
     g_max_scores = 0.
@@ -14489,20 +14472,16 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list(one_mapinfo,
     P = np.empty(n, np.int64)
     
 
-    opcount = 0
+
     
     
 
-    coverage_dict = np.zeros(one_mapinfo[-1][0] + 1, np.int64)
-    for i in range(n):
 
-        coverage_dict[one_mapinfo[i][0]] = min(coverage_dict[one_mapinfo[i][0]]+1, repeat_weight)
             
 
     
     prereadloc = one_mapinfo[0][0]
-    skipcost = oskipcost + coverage_dict[one_mapinfo[0][0]]
-    maxdiff = max(omaxdiff - coverage_dict[one_mapinfo[0][0]], 10)
+
     
     testspace = np.empty(0, np.int64)
 
@@ -14521,7 +14500,7 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list(one_mapinfo,
     g_max_scores = one_mapinfo[i][3]
     g_max_index = i
 
-    c_repeat_weight = 0
+
 
     
     
@@ -14551,9 +14530,7 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list(one_mapinfo,
                 k += 1
             
             testspace_en = i            
-            c_repeat_weight = coverage_dict[one_mapinfo[i][0]]
-            skipcost = oskipcost + c_repeat_weight
-            maxdiff = max(omaxdiff - coverage_dict[one_mapinfo[i][0]], 10)
+
             
             prereadloc = one_mapinfo[i][0]
             
