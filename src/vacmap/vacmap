@@ -134,19 +134,28 @@ if('mode' not in pdict):
     logging.error('mode is required.')
     hit = True
 else:
-    if(pdict['mode'] not in ('H', 'L', 'S', 'asm')):
+    if(pdict['mode'] not in ('H', 'L', 'S', 'R')):
         logging.error('Invaild mode '+ pdict['mode'])
         hit = True
     else:
         logging.info('Mode: ' + pdict['mode'])
-        
+if(pdict['mode'] == 'L'):
+    pdict['local_skipcost'] = 59.
+    pdict['golbal_skipcost'] = 45.
+elif(pdict['mode'] == 'H'):
+    pdict['local_skipcost'] = 40.
+    pdict['golbal_skipcost'] = 45.
+else:
+    pdict['local_skipcost'] = 30.
+    pdict['golbal_skipcost'] = 30.
+      
 if('maxdivergence' not in pdict):
     if(pdict['mode'] == 'L'):
-        pdict['local_skipcost'] = 59.
         pdict['maxdivergence'] = 0.1
-    else:
-        pdict['local_skipcost'] = 40.
+    elif(pdict['mode'] == 'H'):
         pdict['maxdivergence'] = 0.2
+    else:
+        pdict['maxdivergence'] = 0.3
 else:
     pdict['maxdivergence'] = float(pdict['maxdivergence'])
 logging.info('Max sequence divergence: ' + str(pdict['maxdivergence']) + ' [-maxdivergence ' + str(pdict['maxdivergence'])+']')    
@@ -186,15 +195,15 @@ else:
     pdict['nodiscard'] = True
 logging.info('Remove subalignments where the surrounding deletion and insertion have similar sizes: ' + str(pdict['nodiscard'] == False) + ' [--nodiscard]')
 
-if('golbalpenalty' not in pdict):
-    pdict['golbal_skipcost'] = 45.
-else:
+if('golbalpenalty' in pdict):
     pdict['golbal_skipcost'] = float(pdict['golbalpenalty'])
 logging.info('Golbal variation penalty: ' + str(pdict['golbal_skipcost']) + ' [-golbalpenalty ' + str(pdict['golbal_skipcost'])+']')
+logging.info('Tips: Set a smaller value for the global variation penalty to increase sensitivity to small translocations or small dispersed duplications.')
 
 if('localpenalty' in pdict):
     pdict['local_skipcost'] = float(pdict['localpenalty'])
 logging.info('Local variation penalty: ' + str(pdict['local_skipcost']) + ' [-localpenalty ' + str(pdict['local_skipcost'])+']')
+logging.info('Tips: Set a smaller value for the local variation penalty to increase sensitivity to small rearrangements.')
 
 if('golbalmaxdiff' not in pdict):
     pdict['golbal_maxdiff'] = 50
@@ -208,17 +217,19 @@ else:
     pdict['local_maxdiff'] = int(pdict['localmaxdiff'])
 logging.info('Local max diff: ' + str(pdict['local_maxdiff']) + ' [-localmaxdiff ' + str(pdict['local_maxdiff'])+']')
 
+if('nowriteindex' not in pdict):
+    pdict['nowriteindex'] = False
+else:
+    pdict['nowriteindex'] = True
+logging.info('No saving the reference index for reuse: ' + str(pdict['nowriteindex']) + ' [--nowriteindex]')
+
 if('debug' not in pdict):
     pdict['debug'] = False
 else:
     pdict['debug'] = True
 logging.info('Debug: ' + str(pdict['debug']) + ' [--debug]')
 
-if('nowriteindex' not in pdict):
-    pdict['nowriteindex'] = False
-else:
-    pdict['nowriteindex'] = True
-logging.info('No saving the reference index for reuse: ' + str(pdict['nowriteindex']) + ' [--nowriteindex]')
+
 
 
 if(hit == True):
@@ -246,9 +257,9 @@ else:
         import vacmap.mammap_ccs as mammap
     elif(pdict['mode'] == 'S'):
         H = True 
-        import vacmap.mammap_ccs as mammap
-    elif(pdict['mode'] == 'asm'):
-        import vacmap.mammap_ccs as mammap
+        import vacmap.mammap_sensitive as mammap
+    elif(pdict['mode'] == 'R'):
+        import vacmap.mammap_noprefercloser as mammap
         
                     
     refpath = pdict['ref']
