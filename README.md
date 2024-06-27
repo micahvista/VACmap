@@ -1,6 +1,9 @@
 # VACmap
 VACmap-—a long-read aligner specifically designed for complex structural variation discovery.
-Important: If you are interested in detecting complex variants, we recommend using the '-mode S' option to increase sensitivity to small rearrangements. However, existing structural variant callers may fail to extract variant signals from the alignments produced by this mode.
+
+Important
+---------
+If you are interested in detecting complex variants, we recommend using the '-mode S' option to increase sensitivity to small rearrangements. However, existing structural variant callers may fail to extract variant signals from the alignments produced by this mode.
 
 # Demo
 This is a demonstration of the non-linear alignment algorithm used in VACmap: http://64.64.240.35:8050/. I hope this tool proves helpful for your research!
