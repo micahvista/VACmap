@@ -1,6 +1,8 @@
 # VACmap
 VACmap-—a long-read aligner specifically designed for complex structural variation discovery.
+Important: If you are interested in detecting complex variants, we recommend using the '-mode S' option to increase sensitivity to small rearrangements. However, existing structural variant callers may fail to extract variant signals from the alignments produced by this mode.
 
+# Demo
 This is a demonstration of the non-linear alignment algorithm used in VACmap: http://64.64.240.35:8050/. I hope this tool proves helpful for your research!
 
 
@@ -17,12 +19,13 @@ Usage
 ----------------------    
     
     conda activate vacmap_env
-    vacmap -ref /ref.fasta -read /read.fasta -mode H or L -t number_of_threads | samtools sort -@4 > alignments.sorted.bam
+    vacmap -ref /ref.fasta -read /read.fasta -mode S -t number_of_threads | samtools sort -@4 > alignments.sorted.bam
     samtools index -@4 alignments.sorted.bam
     
     #-ref The path of reference sequence. 
     #-read The path of long reads. 
     #-t The number of threads to use. 
+    #-mode S For discovering complex variants (Pacbio CLR, ONT, HiFi). 
     #-mode H For aligning high error rate long read (Pacbio CLR, ONT). 
     #-mode L For aligning low error rate long read (Pacbio HiFi). 
     #--eqx Output =/X CIGAR operators for sequence match/mismatch.
