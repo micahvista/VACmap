@@ -14136,10 +14136,13 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_fast_all(o
 
                 if(filtered == True):
                     gapcost = abs(readgap - refgap)#mark 1
-                    test_scores = S[j] - skipcost + one_mapinfo[i][3] -  min(36, 30 + 0.5 * np.log(max(gapcost, 1)), min(10, gapcost/100)+min(30, gapcost/1000))
+                    test_scores = S[j] - skipcost + one_mapinfo[i][3]# -  min(36, 30 + 0.5 * np.log(max(gapcost, 1)), min(10, gapcost/100)+min(30, gapcost/1000))
                 if(test_scores > max_scores):
                     max_scores = test_scores
                     pre_index = j
+                elif(test_scores == max_scores and pre_index != -9999999):
+                    if(abs(one_mapinfo[pre_index][1] - one_mapinfo[i][1]) > abs(one_mapinfo[j][1] - one_mapinfo[i][1])):
+                        pre_index = j
                     
 
 
@@ -14211,10 +14214,13 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_fast_all(o
 
                 if(filtered == True):
                     gapcost = abs(readgap - refgap)#mark 1
-                    test_scores = S[j] - skipcost + one_mapinfo[i][3] -  min(36, 30 + 0.5 * np.log(max(gapcost, 1)), min(10, gapcost/100)+min(30, gapcost/1000))
+                    test_scores = S[j] - skipcost + one_mapinfo[i][3]# -  min(36, 30 + 0.5 * np.log(max(gapcost, 1)), min(10, gapcost/100)+min(30, gapcost/1000))
                 if(test_scores > max_scores):
                     max_scores = test_scores
                     pre_index = j
+                elif(test_scores == max_scores and pre_index != -9999999):
+                    if(abs(one_mapinfo[pre_index][1] - one_mapinfo[i][1]) > abs(one_mapinfo[j][1] - one_mapinfo[i][1])):
+                        pre_index = j
 
         S[i] = max_scores
         S_i[i] = max_scores
@@ -14415,12 +14421,15 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_all(one_ma
 
                 gapcost = abs(readgap - refgap)#mark 1
 
-                test_scores = S[j] - min(max(30, gapcost), skipcost) + one_mapinfo[i][3] -  min(36, 30 + 0.5 * np.log(max(gapcost, 1)), min(10, gapcost/100)+min(30, gapcost/1000))
+                test_scores = S[j] - min(max(30, gapcost), skipcost) + one_mapinfo[i][3]# -  min(36, 30 + 0.5 * np.log(max(gapcost, 1)), min(10, gapcost/100)+min(30, gapcost/1000))
 
 
             if(test_scores > max_scores):
                 max_scores = test_scores
                 pre_index = j
+            elif(test_scores == max_scores and pre_index != -9999999):
+                if(abs(one_mapinfo[pre_index][1] - one_mapinfo[i][1]) > abs(one_mapinfo[j][1] - one_mapinfo[i][1])):
+                    pre_index = j
                 
 
         S[i] = max_scores
@@ -14588,12 +14597,15 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list(one_mapinfo,
                 break
             if(filtered == True):
                 gapcost = abs(readgap - refgap)#mark 1
-                test_scores = S[j] - skipcost + one_mapinfo[i][3] -  min(36, 30 + 0.5 * np.log(max(gapcost, 1)), min(10, gapcost/100)+min(30, gapcost/1000)) 
+                test_scores = S[j] - skipcost + one_mapinfo[i][3]# -  min(36, 30 + 0.5 * np.log(max(gapcost, 1)), min(10, gapcost/100)+min(30, gapcost/1000))
 
             if(test_scores > max_scores):
 
                 max_scores = test_scores
                 pre_index = j
+            elif(test_scores == max_scores and pre_index != -9999999):
+                if(abs(one_mapinfo[pre_index][1] - one_mapinfo[i][1]) > abs(one_mapinfo[j][1] - one_mapinfo[i][1])):
+                    pre_index = j
                 
 
                     
