@@ -141,10 +141,10 @@ else:
         logging.info('Mode: ' + pdict['mode'])
 if(pdict['mode'] == 'L'):
     pdict['local_skipcost'] = 59.
-    pdict['golbal_skipcost'] = 45.
+    pdict['golbal_skipcost'] = 40.
 elif(pdict['mode'] == 'H'):
     pdict['local_skipcost'] = 40.
-    pdict['golbal_skipcost'] = 45.
+    pdict['golbal_skipcost'] = 40.
 else:
     pdict['local_skipcost'] = 30.
     pdict['golbal_skipcost'] = 30.
@@ -190,7 +190,10 @@ else:
 logging.info('Set the MAPQ of the unbalanced translocation subalignment to 1: ' + str(pdict['markunbalancetra']) + ' [--markunbalancetra]')
 
 if('nodiscard' not in pdict):
-    pdict['nodiscard'] = False
+    if(pdict['mode'] == 'S'):
+        pdict['nodiscard'] = True
+    else:
+        pdict['nodiscard'] = False
 else:
     pdict['nodiscard'] = True
 logging.info('Remove subalignments where the surrounding deletion and insertion have similar sizes: ' + str(pdict['nodiscard'] == False) + ' [--nodiscard]')
