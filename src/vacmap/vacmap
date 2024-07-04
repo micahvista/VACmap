@@ -140,7 +140,7 @@ else:
     else:
         logging.info('Mode: ' + pdict['mode'])
 if(pdict['mode'] == 'L'):
-    pdict['local_skipcost'] = 59.
+    pdict['local_skipcost'] = 40.
     pdict['golbal_skipcost'] = 40.
 elif(pdict['mode'] == 'H'):
     pdict['local_skipcost'] = 40.
@@ -150,12 +150,7 @@ else:
     pdict['golbal_skipcost'] = 30.
       
 if('maxdivergence' not in pdict):
-    if(pdict['mode'] == 'L'):
-        pdict['maxdivergence'] = 0.1
-    elif(pdict['mode'] == 'H'):
-        pdict['maxdivergence'] = 0.2
-    else:
-        pdict['maxdivergence'] = 0.3
+    pdict['maxdivergence'] = 0.5
 else:
     pdict['maxdivergence'] = float(pdict['maxdivergence'])
 logging.info('Max sequence divergence: ' + str(pdict['maxdivergence']) + ' [-maxdivergence ' + str(pdict['maxdivergence'])+']')    
@@ -189,14 +184,8 @@ else:
     pdict['markunbalancetra'] = True
 logging.info('Set the MAPQ of the unbalanced translocation subalignment to 1: ' + str(pdict['markunbalancetra']) + ' [--markunbalancetra]')
 
-if('nodiscard' not in pdict):
-    if(pdict['mode'] == 'S'):
-        pdict['nodiscard'] = True
-    else:
-        pdict['nodiscard'] = False
-else:
-    pdict['nodiscard'] = True
-logging.info('Remove subalignments where the surrounding deletion and insertion have similar sizes: ' + str(pdict['nodiscard'] == False) + ' [--nodiscard]')
+pdict['nodiscard'] = True
+
 
 if('golbalpenalty' in pdict):
     pdict['golbal_skipcost'] = float(pdict['golbalpenalty'])
