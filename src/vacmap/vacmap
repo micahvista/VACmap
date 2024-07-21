@@ -71,6 +71,8 @@ for item in pstring[1:]:
         forvaule = True
         if(item[1] == '-'):
             op = item[2:]
+            if(op[:2] == 'rg'):
+                continue
             if(op == 'MD'):
                 pdict['md'] = True
                 pdict['eqx'] = True
@@ -294,6 +296,23 @@ else:
             index2contig.append(item[0].decode())
             header['SQ'].append({'LN': len(contig2seq[item[0].decode()]), 'SN': item[0].decode()})
             contig2iloc[item[0].decode()] = iloc
+        if('rg-id' in pdict and pdict['rg-id'] != ''):
+            supported_RG_tag = ['ID', 'BC', 'CN', 'DS', 'DT', 'FO', 'KS', 'LB', 'PG', 'PI', 'PL', 'PM', 'PU', 'SM'] 
+            rg_dict = dict()
+            for key in pdict:
+                
+                if('rg' == key[:2]):
+                    if(key[-2:].upper() in supported_RG_tag):
+                        if(pdict[key] != ''):
+                            rg_dict[key[-2:].upper()] = pdict[key]
+                            logging.info('RG tag: ' + key[-2:].upper()+':'+rg_dict[key[-2:].upper()])
+                        else:
+                            logging.error('Missing value for RG tag: ' + key[-2:].upper())
+                            
+                    else:
+                        logging.error('Unsupported RG tag: ' + key[-2:].upper())
+                        
+            header['RG'] = [rg_dict]
         header['PG'] = [{'ID': 'VACmap', 'PN': 'VACmap', 'VN': '1.0', 'CL': command}] 
 
 
