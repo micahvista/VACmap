@@ -25,18 +25,47 @@ Usage
     vacmap -ref /ref.fasta -read /read.fasta -mode S -t number_of_threads | samtools sort -@4 > alignments.sorted.bam
     samtools index -@4 alignments.sorted.bam
     
-    #-ref The path of reference sequence. 
-    #-read The path of long reads. 
-    #-t The number of threads to use. 
-    #-mode S For discovering complex variants (Pacbio CLR, ONT, HiFi). 
-    #-mode H For aligning high error rate long read (Pacbio CLR, ONT). 
-    #-mode L For aligning low error rate long read (Pacbio HiFi). 
-    #--eqx Output =/X CIGAR operators for sequence match/mismatch.
-    #--MD Output the MD tag.
-    #--cs[=short|long] Output the cs tag. (deflaut: short cs).
-    #-k k-mer size (no larger than 28, deflaut: 15) # set -k 19 -w 10 for HiFi data 
+    -ref The path of reference sequence. 
+    -read The path of long reads. 
+    -t The number of threads to use. 
+    -mode S Increase the sensitivity for small variants. (<100bp). (Pacbio CLR, ONT, HiFi). 
+    -mode H For aligning high error rate long read (Pacbio CLR, ONT). 
+    -mode L For aligning low error rate long read (Pacbio HiFi). 
+    --eqx Output =/X CIGAR operators for sequence match/mismatch.
+    --MD Output the MD tag.
+    --cs[=short|long] Output the cs tag. (deflaut: short cs).
+    -k k-mer size (no larger than 28, deflaut: 15) # set -k 19 -w 10 for HiFi data 
         to reduce run time (2X faster) but there is very small decrease in accuracy.
-    #-w minimizer window size. (deflaut: 10)
+    -w minimizer window size. (deflaut: 10)
+
+    --rg-id <string>
+        Adds RG:Z:<string> to all alignments in SAM/BAM [none]
+    --rg-sm <string>
+        RG header: Sample [none]
+    --rg-lb <string>
+        RG header: Library [none]
+    --rg-pl <string>
+        RG header: Platform [none]
+    --rg-ds <string>
+        RG header: Description [none]
+    --rg-dt <string>
+        RG header: Date (format: YYYY-MM-DD) [none]
+    --rg-pu <string>
+        RG header: Platform unit [none]
+    --rg-pi <string>
+        RG header: Median insert size [none]
+    --rg-pg <string>
+        RG header: Programs [none]
+    --rg-cn <string>
+        RG header: sequencing center [none]
+    --rg-fo <string>
+        RG header: Flow order [none]
+    --rg-ks <string>
+        RG header: Key sequence [none]
+    --rg-pm <string>
+        Platform model. Free-form text providing further details of the platform/technology used.
+    --rg-bc <string>
+        Barcode sequence identifying the sample or library.
     
 
 
