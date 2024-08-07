@@ -75,7 +75,9 @@ Usage
 
 Changelog
 ---------
+
 47afde0: Enhanced program execution speed by 40% compared to the previous version. Aug 4, 2024
+
 56dd0ee: Enabled overlapping anchors in non-linear chaining. Jul 4, 2024
 
 Contact
