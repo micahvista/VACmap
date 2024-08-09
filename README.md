@@ -76,6 +76,8 @@ Usage
 Changelog
 ---------
 
+Improved speed, 40% faster. Aug 9, 2024
+
 Fix bug. Aug 5, 2024
 
 Enabled overlapping anchors in non-linear chaining. Jul 4, 2024
