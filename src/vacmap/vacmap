@@ -211,6 +211,12 @@ else:
     pdict['local_maxdiff'] = int(pdict['localmaxdiff'])
 logging.info('Local max diff: ' + str(pdict['local_maxdiff']) + ' [-localmaxdiff ' + str(pdict['local_maxdiff'])+']')
 
+if('copycomments' not in pdict):
+    pdict['copycomments'] = False
+else:
+    pdict['copycomments'] = True
+logging.info('Copy FASTA/Q comments to output: ' + str(pdict['copycomments']) + ' [--copycomments]')
+
 if('nowriteindex' not in pdict):
     pdict['nowriteindex'] = False
 else:
@@ -223,7 +229,7 @@ else:
     pdict['debug'] = True
 logging.info('Debug: ' + str(pdict['debug']) + ' [--debug]')
 
-
+logging.info('Build 08222024')
 
 
 if(hit == True):
@@ -313,7 +319,9 @@ else:
                         logging.error('Unsupported RG tag: ' + key[-2:].upper())
                         
             header['RG'] = [rg_dict]
-        header['PG'] = [{'ID': 'VACmap', 'PN': 'VACmap', 'VN': '1.0', 'CL': command}] 
+        else:
+            logging.info('No RG tag.')
+        header['PG'] = [{'ID': 'VACmap', 'PN': 'VACmap', 'VN': '1.0.08222024', 'CL': command}] 
 
 
         rc_testseq = str(Seq(testseq).reverse_complement())
@@ -341,7 +349,10 @@ else:
         process_list = []
         for count in range(1, n+1):
             if(output_in_stdout == True):
-                one_process = multiprocessing.Process(target=mammap.get_list_of_readmap_stdout, args=(raw_queue, cooked_queue, index_object, contig2seq, True, H, header, pdict))
+                if(pdict['copycomments'] == False):
+                    one_process = multiprocessing.Process(target=mammap.get_list_of_readmap_stdout, args=(raw_queue, cooked_queue, index_object, contig2seq, True, H, header, pdict))
+                else:
+                    one_process = multiprocessing.Process(target=mammap.get_list_of_readmap_stdout_comments, args=(raw_queue, cooked_queue, index_object, contig2seq, True, H, header, pdict))
                 one_process.start()
                 process_list.append(one_process)
             else:
@@ -385,35 +396,67 @@ else:
                         t_time = c_time - st
 
 
-                        logging.info(str(round((count - tmp_count) / tmptime)) + ' / sec in the last ' + str(max(round(tmptime/60), 1)) + ' minutes, ' + str(round(count / t_time)) + ' / sec AVG')
+                        logging.info(str(round((count - tmp_count) / tmptime)) + ' / sec in the last ' + str(max(round(tmptime/60), 1)) + ' minutes, ' + str(round(count / t_time)) + ' / sec AVG. ' + str(count) + ' sequences processed.')
                         tmp_st = c_time
                         tmp_count = count
             else:
-                for rec in mp.fastx_read(fastapath):
-                
-                    try:
-                        name = rec[0]
-                        if(hash(name) in unique_set):
+                if(pdict['copycomments'] == False):
+                    for rec in mp.fastx_read(fastapath):
+                        try:
+                            name = rec[0]
+                            if(hash(name) in unique_set):
+                                continue
+                            seq = rec[1].upper()
+                        except:
+                            logging.error('Failed to decode one read sequence, continue anyway.')
                             continue
-                        seq = rec[1].upper()
-                    except:
-                        logging.error('Failed to decode one read sequence, continue anyway.')
-                        continue
+
+                        unique_set.add(hash(name))
+                        count += 1
+
+                        raw_queue.put((name, seq, rec[2]))
+                        #if(count > 10):
+                            #break
+                        if(count % 100000 == 0):
+                            c_time = time.time()
+
+                            tmptime = c_time - tmp_st
+                            t_time = c_time - st
+
+
+                            logging.info(str(round((count - tmp_count) / tmptime)) + ' / sec in the last ' + str(max(round(tmptime/60), 1)) + ' minutes, ' + str(round(count / t_time)) + ' / sec AVG. ' + str(count) + ' sequences processed.')
+                            tmp_st = c_time
+                            tmp_count = count
+                else:
+                    for rec in mp.fastx_read(fastapath, read_comment = True):
                         
-                    unique_set.add(hash(name))
-                    count += 1
+                        try:
+                            name = rec[0]
+                            if(hash(name) in unique_set):
+                                continue
+                            seq = rec[1].upper()
+                        except:
+                            logging.error('Failed to decode one read sequence, continue anyway.')
+                            continue
 
-                    raw_queue.put((name, seq, rec[2]))
-                    if(count % 100000 == 0):
-                        c_time = time.time()
+                        unique_set.add(hash(name))
+                        count += 1
 
-                        tmptime = c_time - tmp_st
-                        t_time = c_time - st
+                        raw_queue.put((name, seq, rec[2], rec[3]))
+                        #if(count > 10):
+                            #break
+                        if(count % 100000 == 0):
+                            c_time = time.time()
+
+                            tmptime = c_time - tmp_st
+                            t_time = c_time - st
 
 
-                        logging.info(str(round((count - tmp_count) / tmptime)) + ' / sec in the last ' + str(max(round(tmptime/60), 1)) + ' minutes, ' + str(round(count / t_time)) + ' / sec AVG')
-                        tmp_st = c_time
-                        tmp_count = count
+                            logging.info(str(round((count - tmp_count) / tmptime)) + ' / sec in the last ' + str(max(round(tmptime/60), 1)) + ' minutes, ' + str(round(count / t_time)) + ' / sec AVG. ' + str(count) + ' sequences processed.')
+                            tmp_st = c_time
+                            tmp_count = count
+                    
+                
 
 
 
@@ -424,14 +467,14 @@ else:
         t_time = c_time - st
 
 
-        logging.info(str(round((count - tmp_count) / tmptime)) + ' / sec in the last ' + str(max(round(tmptime/60), 1)) + ' minutes, ' + str(round(count / t_time)) + ' / sec AVG')
+        
         for i in range(n):
             raw_queue.put(i)
         for one_process in process_list:
             one_process.join()
         if(output_in_stdout == False):
-            logging.info('Finshed')
+            logging.info('User time (h:m:s): {}:{}:{} '.format(int(t_time//3600), int(t_time%3600//60), int(t_time%60)) + str(round(count / t_time)) + ' / sec AVG. ' + str(count) + ' sequences processed.')
         else:
             cooked_queue.put(0)
             write_process.join()
-            logging.info('Finshed')
+            logging.info('User time (h:m:s): {}:{}:{} '.format(int(t_time//3600), int(t_time%3600//60), int(t_time%60)) + str(round(count / t_time)) + ' / sec AVG. ' + str(count) + ' sequences processed.')
