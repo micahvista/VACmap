@@ -71,6 +71,8 @@ for item in pstring[1:]:
         forvaule = True
         if(item[1] == '-'):
             op = item[2:]
+            if(op[:2] == 'rg'):
+                continue
             if(op == 'MD'):
                 pdict['md'] = True
                 pdict['eqx'] = True
@@ -140,7 +142,7 @@ else:
     else:
         logging.info('Mode: ' + pdict['mode'])
 if(pdict['mode'] == 'L'):
-    pdict['local_skipcost'] = 59.
+    pdict['local_skipcost'] = 40.
     pdict['golbal_skipcost'] = 40.
 elif(pdict['mode'] == 'H'):
     pdict['local_skipcost'] = 40.
@@ -150,12 +152,7 @@ else:
     pdict['golbal_skipcost'] = 30.
       
 if('maxdivergence' not in pdict):
-    if(pdict['mode'] == 'L'):
-        pdict['maxdivergence'] = 0.1
-    elif(pdict['mode'] == 'H'):
-        pdict['maxdivergence'] = 0.2
-    else:
-        pdict['maxdivergence'] = 0.3
+    pdict['maxdivergence'] = 0.5
 else:
     pdict['maxdivergence'] = float(pdict['maxdivergence'])
 logging.info('Max sequence divergence: ' + str(pdict['maxdivergence']) + ' [-maxdivergence ' + str(pdict['maxdivergence'])+']')    
@@ -189,14 +186,8 @@ else:
     pdict['markunbalancetra'] = True
 logging.info('Set the MAPQ of the unbalanced translocation subalignment to 1: ' + str(pdict['markunbalancetra']) + ' [--markunbalancetra]')
 
-if('nodiscard' not in pdict):
-    if(pdict['mode'] == 'S'):
-        pdict['nodiscard'] = True
-    else:
-        pdict['nodiscard'] = False
-else:
-    pdict['nodiscard'] = True
-logging.info('Remove subalignments where the surrounding deletion and insertion have similar sizes: ' + str(pdict['nodiscard'] == False) + ' [--nodiscard]')
+pdict['nodiscard'] = True
+
 
 if('golbalpenalty' in pdict):
     pdict['golbal_skipcost'] = float(pdict['golbalpenalty'])
@@ -220,6 +211,24 @@ else:
     pdict['local_maxdiff'] = int(pdict['localmaxdiff'])
 logging.info('Local max diff: ' + str(pdict['local_maxdiff']) + ' [-localmaxdiff ' + str(pdict['local_maxdiff'])+']')
 
+if('copycomments' not in pdict):
+    pdict['copycomments'] = False
+else:
+    pdict['copycomments'] = True
+logging.info('Copy FASTA/Q comments to output: ' + str(pdict['copycomments']) + ' [--copycomments]')
+
+if('H' not in pdict):
+    pdict['H'] = False
+else:
+    pdict['H'] = True
+logging.info('Use hard-clipping instead of soft-cliping for cliped sequences: ' + str(pdict['H']) + ' [--H]')
+
+if('Q' not in pdict):
+    pdict['Q'] = False
+else:
+    pdict['Q'] = True
+logging.info('Ignore base quality in the input file: ' + str(pdict['Q']) + ' [--Q]')
+
 if('nowriteindex' not in pdict):
     pdict['nowriteindex'] = False
 else:
@@ -232,7 +241,7 @@ else:
     pdict['debug'] = True
 logging.info('Debug: ' + str(pdict['debug']) + ' [--debug]')
 
-
+logging.info('Build 09032024')
 
 
 if(hit == True):
@@ -305,7 +314,26 @@ else:
             index2contig.append(item[0].decode())
             header['SQ'].append({'LN': len(contig2seq[item[0].decode()]), 'SN': item[0].decode()})
             contig2iloc[item[0].decode()] = iloc
-        header['PG'] = [{'ID': 'VACmap', 'PN': 'VACmap', 'VN': '1.0', 'CL': command}] 
+        if('rg-id' in pdict and pdict['rg-id'] != ''):
+            supported_RG_tag = ['ID', 'BC', 'CN', 'DS', 'DT', 'FO', 'KS', 'LB', 'PG', 'PI', 'PL', 'PM', 'PU', 'SM'] 
+            rg_dict = dict()
+            for key in pdict:
+                
+                if('rg' == key[:2]):
+                    if(key[-2:].upper() in supported_RG_tag):
+                        if(pdict[key] != ''):
+                            rg_dict[key[-2:].upper()] = pdict[key]
+                            logging.info('RG tag: ' + key[-2:].upper()+':'+rg_dict[key[-2:].upper()])
+                        else:
+                            logging.error('Missing value for RG tag: ' + key[-2:].upper())
+                            
+                    else:
+                        logging.error('Unsupported RG tag: ' + key[-2:].upper())
+                        
+            header['RG'] = [rg_dict]
+        else:
+            logging.info('No RG tag.')
+        header['PG'] = [{'ID': 'VACmap', 'PN': 'VACmap', 'VN': '1.0.09032024', 'CL': command}] 
 
 
         rc_testseq = str(Seq(testseq).reverse_complement())
@@ -333,7 +361,10 @@ else:
         process_list = []
         for count in range(1, n+1):
             if(output_in_stdout == True):
-                one_process = multiprocessing.Process(target=mammap.get_list_of_readmap_stdout, args=(raw_queue, cooked_queue, index_object, contig2seq, True, H, header, pdict))
+                if(pdict['copycomments'] == False):
+                    one_process = multiprocessing.Process(target=mammap.get_list_of_readmap_stdout, args=(raw_queue, cooked_queue, index_object, contig2seq, True, H, header, pdict))
+                else:
+                    one_process = multiprocessing.Process(target=mammap.get_list_of_readmap_stdout_comments, args=(raw_queue, cooked_queue, index_object, contig2seq, True, H, header, pdict))
                 one_process.start()
                 process_list.append(one_process)
             else:
@@ -377,35 +408,124 @@ else:
                         t_time = c_time - st
 
 
-                        logging.info(str(round((count - tmp_count) / tmptime)) + ' / sec in the last ' + str(max(round(tmptime/60), 1)) + ' minutes, ' + str(round(count / t_time)) + ' / sec AVG')
+                        logging.info(str(round((count - tmp_count) / tmptime)) + ' / sec in the last ' + str(max(round(tmptime/60), 1)) + ' minutes, ' + str(round(count / t_time)) + ' / sec AVG. ' + str(count) + ' sequences processed.')
                         tmp_st = c_time
                         tmp_count = count
             else:
-                for rec in mp.fastx_read(fastapath):
+                if(pdict['copycomments'] == False):
+                    if(pdict['Q'] == False):
+                        for rec in mp.fastx_read(fastapath):
+                            try:
+                                name = rec[0]
+                                if(hash(name) in unique_set):
+                                    continue
+                                seq = rec[1].upper()
+                            except:
+                                logging.error('Failed to decode one read sequence, continue anyway.')
+                                continue
+
+                            unique_set.add(hash(name))
+                            count += 1
+
+                            raw_queue.put((name, seq, rec[2]))
+                            #if(count > 10):
+                                #break
+                            if(count % 100000 == 0):
+                                c_time = time.time()
+
+                                tmptime = c_time - tmp_st
+                                t_time = c_time - st
+
+
+                                logging.info(str(round((count - tmp_count) / tmptime)) + ' / sec in the last ' + str(max(round(tmptime/60), 1)) + ' minutes, ' + str(round(count / t_time)) + ' / sec AVG. ' + str(count) + ' sequences processed.')
+                                tmp_st = c_time
+                                tmp_count = count
+                    else:
+                        for rec in mp.fastx_read(fastapath):
+                            try:
+                                name = rec[0]
+                                if(hash(name) in unique_set):
+                                    continue
+                                seq = rec[1].upper()
+                            except:
+                                logging.error('Failed to decode one read sequence, continue anyway.')
+                                continue
+
+                            unique_set.add(hash(name))
+                            count += 1
+
+                            raw_queue.put((name, seq, None))
+                            #if(count > 10):
+                                #break
+                            if(count % 100000 == 0):
+                                c_time = time.time()
+
+                                tmptime = c_time - tmp_st
+                                t_time = c_time - st
+
+
+                                logging.info(str(round((count - tmp_count) / tmptime)) + ' / sec in the last ' + str(max(round(tmptime/60), 1)) + ' minutes, ' + str(round(count / t_time)) + ' / sec AVG. ' + str(count) + ' sequences processed.')
+                                tmp_st = c_time
+                                tmp_count = count
+                else:
+                    if(pdict['Q'] == False):
+                        for rec in mp.fastx_read(fastapath, read_comment = True):
+
+                            try:
+                                name = rec[0]
+                                if(hash(name) in unique_set):
+                                    continue
+                                seq = rec[1].upper()
+                            except:
+                                logging.error('Failed to decode one read sequence, continue anyway.')
+                                continue
+
+                            unique_set.add(hash(name))
+                            count += 1
+
+                            raw_queue.put((name, seq, rec[2], rec[3]))
+                            #if(count > 10):
+                                #break
+                            if(count % 100000 == 0):
+                                c_time = time.time()
+
+                                tmptime = c_time - tmp_st
+                                t_time = c_time - st
+
+
+                                logging.info(str(round((count - tmp_count) / tmptime)) + ' / sec in the last ' + str(max(round(tmptime/60), 1)) + ' minutes, ' + str(round(count / t_time)) + ' / sec AVG. ' + str(count) + ' sequences processed.')
+                                tmp_st = c_time
+                                tmp_count = count
+                    else:
+                        for rec in mp.fastx_read(fastapath, read_comment = True):
+
+                            try:
+                                name = rec[0]
+                                if(hash(name) in unique_set):
+                                    continue
+                                seq = rec[1].upper()
+                            except:
+                                logging.error('Failed to decode one read sequence, continue anyway.')
+                                continue
+
+                            unique_set.add(hash(name))
+                            count += 1
+
+                            raw_queue.put((name, seq, None, rec[3]))
+                            #if(count > 10):
+                                #break
+                            if(count % 100000 == 0):
+                                c_time = time.time()
+
+                                tmptime = c_time - tmp_st
+                                t_time = c_time - st
+
+
+                                logging.info(str(round((count - tmp_count) / tmptime)) + ' / sec in the last ' + str(max(round(tmptime/60), 1)) + ' minutes, ' + str(round(count / t_time)) + ' / sec AVG. ' + str(count) + ' sequences processed.')
+                                tmp_st = c_time
+                                tmp_count = count
+                    
                 
-                    try:
-                        name = rec[0]
-                        if(hash(name) in unique_set):
-                            continue
-                        seq = rec[1].upper()
-                    except:
-                        logging.error('Failed to decode one read sequence, continue anyway.')
-                        continue
-                        
-                    unique_set.add(hash(name))
-                    count += 1
-
-                    raw_queue.put((name, seq, rec[2]))
-                    if(count % 100000 == 0):
-                        c_time = time.time()
-
-                        tmptime = c_time - tmp_st
-                        t_time = c_time - st
-
-
-                        logging.info(str(round((count - tmp_count) / tmptime)) + ' / sec in the last ' + str(max(round(tmptime/60), 1)) + ' minutes, ' + str(round(count / t_time)) + ' / sec AVG')
-                        tmp_st = c_time
-                        tmp_count = count
 
 
 
@@ -416,14 +536,14 @@ else:
         t_time = c_time - st
 
 
-        logging.info(str(round((count - tmp_count) / tmptime)) + ' / sec in the last ' + str(max(round(tmptime/60), 1)) + ' minutes, ' + str(round(count / t_time)) + ' / sec AVG')
+        
         for i in range(n):
             raw_queue.put(i)
         for one_process in process_list:
             one_process.join()
         if(output_in_stdout == False):
-            logging.info('Finshed')
+            logging.info('User time (h:m:s): {}:{}:{} '.format(int(t_time//3600), int(t_time%3600//60), int(t_time%60)) + str(round(count / t_time)) + ' / sec AVG. ' + str(count) + ' sequences processed.')
         else:
             cooked_queue.put(0)
             write_process.join()
-            logging.info('Finshed')
+            logging.info('User time (h:m:s): {}:{}:{} '.format(int(t_time//3600), int(t_time%3600//60), int(t_time%60)) + str(round(count / t_time)) + ' / sec AVG. ' + str(count) + ' sequences processed.')
