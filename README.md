@@ -44,7 +44,12 @@ Usage
         
         --cs[=short|long] Output the cs tag. (deflaut: short cs).
         
-        Copy FASTA/Q comments to output. [--copycomments]
+        --copycomments Copy FASTA/Q comments to output. 
+
+        --H Use hard-clipping instead of soft-cliping for cliped sequences.
+            SV callers may failed to detect split read events.
+
+        --Q Ignore base quality in the input file.
     
         --rg-id <string> Adds RG:Z:<string> to all alignments
         --rg-sm <string> RG header: Sample 
@@ -69,6 +74,8 @@ Usage
 
 Changelog
 ---------
+
+Reduce runtime (45% faster for aligning HiFi data) and include options to decrease output size. Seq 3, 2024
 
 Copy FASTA/Q comments to output. Aug 22, 2024
 
