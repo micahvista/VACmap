@@ -47,7 +47,7 @@ Usage
         --copycomments Copy FASTA/Q comments to output. 
 
         --H Use hard-clipping instead of soft-cliping for cliped sequences.
-            SV callers may failed to detect split read events.
+            [Warning: SV callers may fail to detect split-read events.]
 
         --Q Ignore base quality in the input file.
     
