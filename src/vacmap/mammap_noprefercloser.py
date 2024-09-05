@@ -15526,213 +15526,6 @@ def extend_func(raw_alignment_list, readid, mapq, testseq, rc_testseq, testseq_l
     
     alignment_list, onemapinfolist = get_onemapinfolist(new_alignment_list, cigarlist, readid, mapq, testseq_len, contig2start, need_reverse)
     return alignment_list, onemapinfolist, TRA_signal, filtered
-#RG
-def get_bam_dict_str(mapinfo, query, qual, contig2iloc, contig2seq, md, shortcs, cigar2cg, markunbalancetra, option):
-    #'hhk',         ,  '1', '+', 11, 9192, 2767041, 2776138, 60
-    #      0            1    2   3    4      5         6      7
-    #'18_19897150_+', '18', '+', 0, 4776, 19832244, 19837393, 1]
-    if(markunbalancetra == True):
-        mapinfo = reassign_mapq(mapinfo)
-    else:
-        for iloc in range(len(mapinfo)):
-            mapinfo[iloc] = list(mapinfo[iloc])
-
-    
-
-    
-    rc_query = str(Seq(query).reverse_complement())
-    #mapinfo.sort(key = sort_by_length)
-    #mapinfo = mapinfo[::-1]
-    mapinfo.sort(key = sortbycontig)
-    iloc2nm = dict()
-    iloc2md = dict()
-    iloc2cs = dict()
-    iloc2n_cigar = dict()
-    tmpiloc = -1
-    if(md == False):
-        for item in mapinfo:
-            item[-1], n_cigar = mergecigar_n(item[-1])
-            tmpiloc += 1
-            if(item[2] == '+'):
-                nm = compute_NM_tag(query[item[3]: item[4]], get_refseq(item[1], item[5], item[6], contig2seq))
-            else:
-                nm = compute_NM_tag(rc_query[item[3]: item[4]], get_refseq(item[1], item[5], item[6], contig2seq))
-            iloc2nm[tmpiloc] = nm
-            iloc2n_cigar[tmpiloc] = n_cigar
-    else:
-        for item in mapinfo:
-            tmpiloc += 1
-            if(item[2] == '+'):
-                tmp_query = query[item[3]: item[4]]
-                tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
-            else:
-                tmp_query = rc_query[item[3]: item[4]]
-                tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
-            cigarstring, mdstring, csstring, n_cigar = mergecigar_md_cs(item[-1], tmp_target, tmp_query, shortcs)
-            nm = compute_NM_tag(tmp_query, tmp_target)
-            item[-1] = cigarstring
-            iloc2nm[tmpiloc] = nm
-            iloc2md[tmpiloc] = mdstring
-            iloc2cs[tmpiloc] = csstring
-            iloc2n_cigar[tmpiloc] = n_cigar
-
-    if((qual != None) and (len(qual) == len(query))):
-        query_qualities = qual
-        rc_query_qualities = query_qualities[::-1]
-    a_list = []
-    primary_iloc = 0
-    if(len(mapinfo) > 1):
-        if(mapinfo[0][7] == 1 and mapinfo[1][7] != 1):
-            primary_iloc = 1
-
-    #QNAME FLAG  RNAME  POS  MAPQ  CIGAR RNEXT  PNEXT  TLEN   SEQ   QUAL
-    for iloc in range(len(mapinfo)):
-        
-        bam_dict = dict()
-        if('rg-id' in option):
-            bam_dict['RG'] = option['rg-id']
-        primary = mapinfo[iloc]
-        bam_dict['QNAME'] = primary[0]
-        bam_dict['RNAME'] = primary[1]
-        if(iloc == primary_iloc):
-            base_value = 0
-        else:
-            base_value = 2048
-        if(primary[2] == '+'):
-            bam_dict['FLAG'] = str(base_value)
-
-        else:
-            bam_dict['FLAG'] = str(16 + base_value)
-
-
-        bam_dict['POS'] = str(primary[5] + 1)# SAM Format
-
-        if(iloc2n_cigar[iloc] > 65535):
-            if(cigar2cg == True):
-                bam_dict['CG'] = primary[8]
-                logging.info('Write long CIGAR to CG tag.')
-            else:
-                bam_dict['CIGAR'] = primary[8]
-        else:
-            bam_dict['CIGAR'] = primary[8]
-
-        if(len(mapinfo) > 1):
-            salist = []
-            tmpiloc = -1
-            for item in mapinfo:
-                tmpiloc += 1
-                if(tmpiloc == iloc):
-                    continue
-                mq = mapinfo[tmpiloc][7]
-                if(mq != 0):
-                    mq = 60
-                else:
-                    mq = 1
-                nm = iloc2nm[tmpiloc]
-                salist.append(''.join((item[1], ',', str(item[5]+1), ',', item[2], ',', item[8], ',', str(mq), ',', str(nm)+';')))
-
-            bam_dict['SA'] = ''.join(salist)
-        mq = mapinfo[iloc][7]
-        if(mq != 0):
-            mq = 60
-        else:
-            mq = 1
-        item = primary
-
-        bam_dict['MAPQ'] = str(mq)
-
-        if(item[2] == '+'):
-            bam_dict['SEQ'] = query
-
-            if((qual != None) and (len(qual) == len(query))):
-                bam_dict['QUAL'] = query_qualities
-        else:
-            bam_dict['SEQ'] = rc_query
-
-            if((qual != None) and (len(qual) == len(query))):
-                bam_dict['QUAL'] = rc_query_qualities
-        bam_dict['NM'] = iloc2nm[iloc]
-        if(md == True):
-            bam_dict['MD'] = iloc2md[iloc]
-            bam_dict['cs'] = iloc2cs[iloc]
-
-        a_list.append(P_alignmentstring(bam_dict))
-    return a_list
-def get_list_of_readmap_stdout(raw_queue, cooked_queue, minimap, contig2seq, hastra, H, header, option):
-    cache_size = 100
-    a_list = []
-    st = time.time()
-    redo_ratio = 5
-    
-    contig2start = Dict()
-    index2contig = List()
-    contig2iloc = dict()
-    iloc = -1
-    for item in minimap.seq_offset:
-        iloc += 1
-        contig2start[item[0].decode()] = item[2]
-        index2contig.append(item[0].decode())
-        contig2iloc[item[0].decode()] = iloc
-
-    
-    iloc = 0
-    unmapcountlist = []
-    plotdata = []
-    
-    rt_list = []
-    f_redo_ratio_list = []
-    
-
-
-    rev_read_count = 0
-
-    while(True):
-        readidandseq = raw_queue.get()
-        if(type(readidandseq) == int):
-            break
-
-
-        try:
-            onemapinfolist, (alignment_list,raw_alignment_list), TRA_signal, f_redo_ratio = get_readmap_DP_test(readidandseq[0], readidandseq[1], contig2start, contig2seq, minimap, index2contig, option, hastra = False, redo_ratio = redo_ratio, eqx = option['eqx'], check_num = option['c'])
-        except Exception as error:
-            #logging.info('Failed to convert to sam record')
-            if(option['debug'] == True):
-                logging.error(error)
-                logging.info(readidandseq[0])
-                logging.info(readidandseq[1])
-                #break
-            continue
-
-
-
-
-
-
-        if(len(onemapinfolist) != 0):
-            try:
-                tmp_a_list = get_bam_dict_str(onemapinfolist, readidandseq[1], readidandseq[2], contig2iloc, contig2seq, option['md'], option['shortcs'], option['cigar2cg'], option['markunbalancetra'], option)
-            except:
-                if(option['debug'] == True):
-                    logging.info('Failed to convert to sam record')
-                    logging.info(readidandseq[0])
-                    logging.info(readidandseq[1])
-                continue
-            if((tmp_a_list) == None):
-                continue
-            else:
-                #if(f_redo_ratio != -1):
-                    #f_redo_ratio_list.append(f_redo_ratio)
-                a_list += tmp_a_list
-                if(len(a_list) > cache_size):
-                    cooked_queue.put(a_list)
-                    a_list = []
-                else:
-                    continue
-    if(len(a_list) > 0):
-        cooked_queue.put(a_list)
-    #f_redo_ratio_list = np.array(f_redo_ratio_list)
-    #info = 'median: '+ str(np.median(f_redo_ratio_list)) + ' avg: ' + str(f_redo_ratio_list.mean())
-    #logging.info(info)
 
 #testing 20240801
 extra = []
@@ -17193,374 +16986,6 @@ def fix_simple_inv(alignment_list, contig2start, contig2seq, testseq):
 
                                 
             iloc += 1
-#0822
-def P_alignmentstring_comments(infodict, comments):
-                #  0     1     2     3     4     5     6      7      8     9     10
-                #QNAME FLAG  RNAME  POS  MAPQ  CIGAR RNEXT  PNEXT  TLEN   SEQ   QUAL
-    infolist = ['*',   '4',   '*',  '0', '255', '*',  '*',   '0',  '0',   '*',   '*']
-    name2iloc = {
-        'QNAME': 0,
-        'FLAG': 1,
-        'RNAME': 2,
-        'POS': 3,
-        'MAPQ': 4,
-        'CIGAR': 5,
-        'RNEXT': 6,
-        'PNEXT': 7,
-        'TLEN': 8,
-        'SEQ': 9,
-        'QUAL': 10
-    }
-    def p_other_tag(tag, value):
-        if(type(value) == int):
-            code = 'i'
-        elif(type(value) == float):
-            code = 'f'
-        elif(type(value) == str):
-            code = 'Z'
-        else:
-            code = 'Z'
-        return tag+':'+code+':'+str(value)
-    def checkcomment(comments, infolist, tags):
-        if(isinstance(comments, str)):
-            comments_info = comments.split('\t')
-            for onecomment in comments_info:
-                info = onecomment.split(':')
-                if((len(info) == 3) and (len(info[0]) == 2) and (info[0] not in tags) and (info[1] in ('A', 'i', 'f', 'Z', 'H', 'B'))):
-                    infolist.append(onecomment)
-                    tags.add(info[0])
-    tags = set()
-    for key in infodict:
-        if(key in name2iloc):
-            infolist[name2iloc[key]] = infodict[key]
-        else:
-            infolist.append(p_other_tag(key, infodict[key]))
-            tags.add(key)
-    checkcomment(comments, infolist, tags)
-    return '\t'.join(infolist)
-def get_bam_dict_str_comments(mapinfo, query, qual, comments, contig2iloc, contig2seq, md, shortcs, cigar2cg, markunbalancetra, option):
-    #'hhk',         ,  '1', '+', 11, 9192, 2767041, 2776138, 60
-    #      0            1    2   3    4      5         6      7
-    #'18_19897150_+', '18', '+', 0, 4776, 19832244, 19837393, 1]
-    if(markunbalancetra == True):
-        mapinfo = reassign_mapq(mapinfo)
-    else:
-        for iloc in range(len(mapinfo)):
-            mapinfo[iloc] = list(mapinfo[iloc])
-
-    
-
-    
-    rc_query = str(Seq(query).reverse_complement())
-    #mapinfo.sort(key = sort_by_length)
-    #mapinfo = mapinfo[::-1]
-    mapinfo.sort(key = sortbycontig)
-    iloc2nm = dict()
-    iloc2md = dict()
-    iloc2cs = dict()
-    iloc2n_cigar = dict()
-    tmpiloc = -1
-    if(md == False):
-        for item in mapinfo:
-            item[-1], n_cigar = mergecigar_n(item[-1])
-            tmpiloc += 1
-            if(item[2] == '+'):
-                nm = compute_NM_tag(query[item[3]: item[4]], get_refseq(item[1], item[5], item[6], contig2seq))
-            else:
-                nm = compute_NM_tag(rc_query[item[3]: item[4]], get_refseq(item[1], item[5], item[6], contig2seq))
-            iloc2nm[tmpiloc] = nm
-            iloc2n_cigar[tmpiloc] = n_cigar
-    else:
-        for item in mapinfo:
-            tmpiloc += 1
-            if(item[2] == '+'):
-                tmp_query = query[item[3]: item[4]]
-                tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
-            else:
-                tmp_query = rc_query[item[3]: item[4]]
-                tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
-            cigarstring, mdstring, csstring, n_cigar = mergecigar_md_cs(item[-1], tmp_target, tmp_query, shortcs)
-            nm = compute_NM_tag(tmp_query, tmp_target)
-            item[-1] = cigarstring
-            iloc2nm[tmpiloc] = nm
-            iloc2md[tmpiloc] = mdstring
-            iloc2cs[tmpiloc] = csstring
-            iloc2n_cigar[tmpiloc] = n_cigar
-
-    if((qual != None) and (len(qual) == len(query))):
-        query_qualities = qual
-        rc_query_qualities = query_qualities[::-1]
-    a_list = []
-    primary_iloc = 0
-    if(len(mapinfo) > 1):
-        if(mapinfo[0][7] == 1 and mapinfo[1][7] != 1):
-            primary_iloc = 1
-
-    #QNAME FLAG  RNAME  POS  MAPQ  CIGAR RNEXT  PNEXT  TLEN   SEQ   QUAL
-    for iloc in range(len(mapinfo)):
-        
-        bam_dict = dict()
-        if('rg-id' in option):
-            bam_dict['RG'] = option['rg-id']
-        primary = mapinfo[iloc]
-        bam_dict['QNAME'] = primary[0]
-        bam_dict['RNAME'] = primary[1]
-        if(iloc == primary_iloc):
-            base_value = 0
-        else:
-            base_value = 2048
-        if(primary[2] == '+'):
-            bam_dict['FLAG'] = str(base_value)
-
-        else:
-            bam_dict['FLAG'] = str(16 + base_value)
-
-
-        bam_dict['POS'] = str(primary[5] + 1)# SAM Format
-
-        if(iloc2n_cigar[iloc] > 65535):
-            if(cigar2cg == True):
-                bam_dict['CG'] = primary[8]
-                logging.info('Write long CIGAR to CG tag.')
-            else:
-                bam_dict['CIGAR'] = primary[8]
-        else:
-            bam_dict['CIGAR'] = primary[8]
-
-        if(len(mapinfo) > 1):
-            salist = []
-            tmpiloc = -1
-            for item in mapinfo:
-                tmpiloc += 1
-                if(tmpiloc == iloc):
-                    continue
-                mq = mapinfo[tmpiloc][7]
-                if(mq != 0):
-                    mq = 60
-                else:
-                    mq = 1
-                nm = iloc2nm[tmpiloc]
-                salist.append(''.join((item[1], ',', str(item[5]+1), ',', item[2], ',', item[8], ',', str(mq), ',', str(nm)+';')))
-
-            bam_dict['SA'] = ''.join(salist)
-        mq = mapinfo[iloc][7]
-        if(mq != 0):
-            mq = 60
-        else:
-            mq = 1
-        item = primary
-
-        bam_dict['MAPQ'] = str(mq)
-
-        if(item[2] == '+'):
-            bam_dict['SEQ'] = query
-
-            if((qual != None) and (len(qual) == len(query))):
-                bam_dict['QUAL'] = query_qualities
-        else:
-            bam_dict['SEQ'] = rc_query
-
-            if((qual != None) and (len(qual) == len(query))):
-                bam_dict['QUAL'] = rc_query_qualities
-        bam_dict['NM'] = iloc2nm[iloc]
-        if(md == True):
-            bam_dict['MD'] = iloc2md[iloc]
-            bam_dict['cs'] = iloc2cs[iloc]
-
-        a_list.append(P_alignmentstring_comments(bam_dict, comments))
-    return a_list
-def get_list_of_readmap_stdout(raw_queue, cooked_queue, minimap, contig2seq, hastra, H, header, option):
-    cache_size = 100
-    a_list = []
-    st = time.time()
-    redo_ratio = 5
-    
-    contig2start = Dict()
-    index2contig = List()
-    contig2iloc = dict()
-    iloc = -1
-    for item in minimap.seq_offset:
-        iloc += 1
-        contig2start[item[0].decode()] = item[2]
-        index2contig.append(item[0].decode())
-        contig2iloc[item[0].decode()] = iloc
-
-    
-
-    
-    rt_list = []
-
-
-    while(True):
-        readidandseq = raw_queue.get()
-        if(type(readidandseq) == int):
-            break
-
-
-        try:
-            onemapinfolist, (alignment_list,raw_alignment_list), TRA_signal, f_redo_ratio = get_readmap_DP_test(readidandseq[0], readidandseq[1], contig2start, contig2seq, minimap, index2contig, option, hastra = False, redo_ratio = redo_ratio, eqx = option['eqx'], check_num = option['c'])
-        except Exception as error:
-
-            if(option['debug'] == True):
-                logging.error(error)
-                logging.info(readidandseq[0])
-                logging.info(readidandseq[1])
-
-            continue
-
-
-
-
-
-
-        if(len(onemapinfolist) != 0):
-            try:
-                tmp_a_list = get_bam_dict_str(onemapinfolist, readidandseq[1], readidandseq[2], contig2iloc, contig2seq, option['md'], option['shortcs'], option['cigar2cg'], option['markunbalancetra'], option)
-            except:
-                if(option['debug'] == True):
-                    logging.info('Failed to convert to sam record')
-                    logging.info(readidandseq[0])
-                    logging.info(readidandseq[1])
-                continue
-            if((tmp_a_list) == None):
-                continue
-            else:
-
-                a_list += tmp_a_list
-                if(len(a_list) > cache_size):
-                    cooked_queue.put(a_list)
-                    a_list = []
-                else:
-                    continue
-    if(len(a_list) > 0):
-        cooked_queue.put(a_list)
-        
-def get_list_of_readmap_stdout_comments(raw_queue, cooked_queue, minimap, contig2seq, hastra, H, header, option):
-    cache_size = 100
-    a_list = []
-    st = time.time()
-    redo_ratio = 5
-    
-    contig2start = Dict()
-    index2contig = List()
-    contig2iloc = dict()
-    iloc = -1
-    for item in minimap.seq_offset:
-        iloc += 1
-        contig2start[item[0].decode()] = item[2]
-        index2contig.append(item[0].decode())
-        contig2iloc[item[0].decode()] = iloc
-
-    
-
-    
-    rt_list = []
-
-
-    while(True):
-        readidandseq = raw_queue.get()
-        if(type(readidandseq) == int):
-            break
-
-
-        try:
-            onemapinfolist, (alignment_list,raw_alignment_list), TRA_signal, f_redo_ratio = get_readmap_DP_test(readidandseq[0], readidandseq[1], contig2start, contig2seq, minimap, index2contig, option, hastra = False, redo_ratio = redo_ratio, eqx = option['eqx'], check_num = option['c'])
-        except Exception as error:
-
-            if(option['debug'] == True):
-                logging.error(error)
-                logging.info(readidandseq[0])
-                logging.info(readidandseq[1])
-
-            continue
-
-
-
-
-
-
-        if(len(onemapinfolist) != 0):
-            try:
-                tmp_a_list = get_bam_dict_str_comments(onemapinfolist, readidandseq[1], readidandseq[2], readidandseq[3], contig2iloc, contig2seq, option['md'], option['shortcs'], option['cigar2cg'], option['markunbalancetra'], option)
-            except:
-                if(option['debug'] == True):
-                    logging.info('Failed to convert to sam record')
-                    logging.info(readidandseq[0])
-                    logging.info(readidandseq[1])
-                continue
-            if((tmp_a_list) == None):
-                continue
-            else:
-
-                a_list += tmp_a_list
-                if(len(a_list) > cache_size):
-                    cooked_queue.put(a_list)
-                    a_list = []
-                else:
-                    continue
-    if(len(a_list) > 0):
-        cooked_queue.put(a_list)
-        
-def get_readmap_DP_test(readid, testseq, contig2start, contig2seq, index_object, index2contig, option, kmersize = 15, local_kmersize = 9, local_maxdiff = 30, refine = True, local_skipcost = 59., golbal_skipcost = (45., 45.),  golbal_maxdiff = (30, 30), check_num = 20, bin_size = 100, hastra = False, debug = False, H = False, mid_occ = -1, redo_ratio = 5, eqx = False):
-    kmersize = index_object.k
-    golbal_skipcost = (option['golbal_skipcost'], option['golbal_skipcost'])
-    golbal_maxdiff = (option['golbal_maxdiff'], option['golbal_maxdiff'])
-    local_skipcost = option['local_skipcost']
-    local_maxdiff = option['local_maxdiff']
-
-    setting_kmersize = kmersize
-    setting_maxdiff = golbal_maxdiff[1]
-
-    
-
-    rc_testseq = str(Seq(testseq).reverse_complement())
-    testseq_len = len(testseq)
-                           
-    mapq, scores, raw_alignment_list, redo_flag = decode_hit(index_object, index2contig, testseq, testseq_len, contig2start, kmersize, contig2seq, skipcost = golbal_skipcost, maxdiff = golbal_maxdiff, maxgap = 200, check_num = check_num, c_bias = 5000, bin_size = bin_size, overlapprecentage = 0.5, hastra = hastra, H = H, mid_occ = mid_occ)
-
-
-
-    if(scores == 0.):
-        return [], ([], []), 0, redo_flag
-    
-    
-    if((scores < 0.)):
-        need_reverse = True
-    else:
-        need_reverse = False
-
-    setting_maxdiff = local_maxdiff
-    setting_kmersize = local_kmersize
-
-
-
-    raw_alignment_array = np.array(raw_alignment_list)
-    if(need_reverse == False):
-        scores, raw_alignment_list = get_localmap_multi_all_forDP_inv_guide(raw_alignment_array, testseq, rc_testseq, contig2start, contig2seq, kmersize = setting_kmersize, skipcost = local_skipcost, maxdiff = setting_maxdiff, maxgap = 99, shift = 1)
-
-    else:
-        scores, raw_alignment_list = get_localmap_multi_all_forDP_inv_guide(raw_alignment_array, rc_testseq, testseq, contig2start, contig2seq, kmersize = setting_kmersize, skipcost = local_skipcost, maxdiff = setting_maxdiff, maxgap = 99, shift = 1)
-        testseq, rc_testseq = rc_testseq, testseq
-
-    if(len(raw_alignment_list) <= 1):
-        return [], ([], []), 0, redo_flag
-
-
-
-    alignment_list, onemapinfolist, TRA_signal, filtered = extend_func(List(raw_alignment_list[::-1]), readid, mapq, testseq, rc_testseq, testseq_len, setting_kmersize, pos2contig, contig2start, contig2seq, setting_maxdiff, need_reverse, maxdiffratio = option['maxdivergence'], debug = debug, H = H, nofilter = option['nodiscard'], eqx = eqx)
-    if(len(onemapinfolist) == 0):
-        return [], ([], []), 0, redo_flag
-
-    
-    
-
-    if(option['nodiscard'] == False and filtered == True and pairedindel(List([line[-1] for line in onemapinfolist]), indelsize = 30) == True):
-        alignment_list, onemapinfolist, TRA_signal, filtered = extend_func(List(raw_alignment_list[::-1]), readid, mapq, testseq, rc_testseq, testseq_len, setting_kmersize, pos2contig, contig2start, contig2seq, setting_maxdiff, need_reverse, maxdiffratio = option['maxdivergence'], debug = debug, H = H, nofilter = True, eqx = eqx)
-        
-    
-
-    return onemapinfolist, (alignment_list, raw_alignment_list), TRA_signal, redo_flag
-
 #09032024
 @njit
 def insertpoint_score_distance(S_i, target_score, k, S_arg_i, target_distance, distance_arr):
@@ -19373,644 +18798,1011 @@ def hit2work_1_64(one_mapinfo, index2contig, contig2start, testseq_len, skipcost
         all_index_List.append(List([0]))
         all_index_List.pop(0)
         return path_list, primary_index_List, primary_scores_List, all_index_List, 0, scores_list, factor
-
-@njit
-def get_MD_CSshort(info, target, query):
-    mdstring = ''
-    csstring = ''
-    refloc = 0
-    readloc = 0
-    preop = ''
-    equal_value = 0
-    for iloc in range(1, len(info), 2):
-        value = string2int(info[iloc - 1])
-        if(info[iloc] == 'X'):
-            if(equal_value > 0):
-                mdstring += str(equal_value)
-            elif(preop == 'D'):
-                mdstring += '0'
-            mdstring += target[refloc]
-            csstring += '*' + (target[refloc] + query[readloc]).lower()
-            for jloc in range(1, value):
-                mdstring += '0' + target[refloc + jloc]
-                csstring += '*' + (target[refloc + jloc] + query[readloc + jloc]).lower()
-            refloc += value
-            readloc += value
-            equal_value = 0
-        elif(info[iloc] == '='):
-            #mdstring += info[iloc - 1]
-            refloc += value
-            readloc += value
-            equal_value += value
-            csstring += ':' + info[iloc - 1]
-        elif(info[iloc] == 'D'):
-            if(equal_value > 0):
-                mdstring += str(equal_value)
-            elif(preop == 'X'):
-                mdstring += '0'
-            mdstring += '^' + target[refloc: refloc + value]
-            csstring += '-' + target[refloc: refloc + value].lower()
-            refloc += value
-            equal_value = 0
-        elif(info[iloc] == 'I'):
-            csstring += '+' + query[readloc: readloc + value].lower()
-            readloc += value
-            continue
-        elif(info[iloc] == 'S' or info[iloc] == 'H'):
-            continue
-        else:
-            return '', ''
-        preop = info[iloc]
-    if(equal_value > 0):
-        mdstring += str(equal_value)
-    return mdstring, csstring
-@njit
-def get_MD_CSlong(info, target, query):
-    mdstring = ''
-    csstring = ''
-    refloc = 0
-    readloc = 0
-    preop = ''
-    equal_value = 0
-    for iloc in range(1, len(info), 2):
-        value = string2int(info[iloc - 1])
-        if(info[iloc] == 'X'):
-            if(equal_value > 0):
-                mdstring += str(equal_value)
-            elif(preop == 'D'):
-                mdstring += '0'
-            mdstring += target[refloc]
-            csstring += '*' + (target[refloc] + query[readloc]).lower()
-            for jloc in range(1, value):
-                mdstring += '0' + target[refloc + jloc]
-                csstring += '*' + (target[refloc + jloc] + query[readloc + jloc]).lower()
-            refloc += value
-            readloc += value
-            equal_value = 0
-        elif(info[iloc] == '='):
-
-            csstring += '=' + target[refloc: refloc + value].upper()
-            refloc += value
-            readloc += value
-            equal_value += value
-            
-        elif(info[iloc] == 'D'):
-            if(equal_value > 0):
-                mdstring += str(equal_value)
-            elif(preop == 'X'):
-                mdstring += '0'
-            mdstring += '^' + target[refloc: refloc + value]
-            csstring += '-' + target[refloc: refloc + value].lower()
-            refloc += value
-            equal_value = 0
-        elif(info[iloc] == 'I'):
-            csstring += '+' + query[readloc: readloc + value].lower()
-            readloc += value
-            continue
-        elif(info[iloc] == 'S' or info[iloc] == 'H'):
-            continue
-        else:
-            return '', ''
-        preop = info[iloc]
-    if(equal_value > 0):
-        mdstring += str(equal_value)
-    return mdstring, csstring
-@njit
-def mergecigar_md_(cigarstring, target, query, shortcs = True):
-
-    numberrange = (ord('0'), ord('9'))
     
-    oplist = []
-    num = 0
-    preop = '0'
-    prenum = 0
-    for ch in cigarstring:
-        c = ord(ch)
-        if(numberrange[0] <= c and numberrange[1] >= c):
-            num = num * 10 + c - numberrange[0]
-        else:
-            if(preop == ch):
-                prenum = prenum + num
-                oplist[-2] = str(prenum)
-                num = 0
-            else:
-                prenum = num
-                oplist.append(str(num))
-                oplist.append(ch)
-                preop = ch
-                num = 0
-
-    if(shortcs == True):
-        mdstring, csstring = get_MD_CSshort(oplist, target, query)
-    else:
-        mdstring, csstring = get_MD_CSlong(oplist, target, query)
-    return oplist, mdstring, csstring
-
-def mergecigar_md_cs(cigarstring, target, query, shortcs = True):  
-
-    oplist, mdstring, csstring = mergecigar_md_(cigarstring, target, query, shortcs)
-
-    n_cigar = len(oplist)
-    return ''.join(oplist), mdstring, csstring, n_cigar
-def get_onemapinfolist(new_alignment_list, cigarlist, readid, mapq, testseq_len, contig2start, need_reverse, use_hardclip):
-    if(use_hardclip == True):
-        clipsyb = 'H'
-    else:
-        clipsyb = 'S'
-    onemapinfolist = []
-    iloc = -1
-    if(need_reverse == False):
-        for alignment in new_alignment_list:
-            contig = pos2contig(alignment[0][1], contig2start)
-            iloc += 1
-            refbias = contig2start[contig]
-            if(alignment[0][2] == 1):
-                query_st = alignment[0][0]
-                query_en = alignment[-1][0] + alignment[-1][3]
-                target_st = alignment[0][1]
-                target_en = alignment[-1][1] + alignment[-1][3]
-                if(query_st > 0):
-                    topcigar = str(query_st) + clipsyb
-                else:
-
-                    topcigar = ''
-                if((testseq_len - query_en) > 0):
-                    tailcigar = str(testseq_len - query_en) + clipsyb
-                else:
-                    tailcigar = ''
-                if(alignment[-1][3] > 0):
-                    tailcigar = str(int(alignment[-1][3]))+'M'+tailcigar
-                cigarstring = ''.join(cigarlist[iloc])
-                onemapinfolist.append((readid, contig, '+', query_st, query_en, target_st-refbias, target_en-refbias, mapq, topcigar+cigarstring+tailcigar))
-            else:
-                query_st = testseq_len-alignment[0][0]-alignment[0][3]
-                query_en = testseq_len-alignment[-1][0]
-                target_st = alignment[0][1]
-                target_en = alignment[-1][1] + alignment[-1][3]
-
-                cigarstring = ''.join(cigarlist[iloc])
-                if(query_st > 0):
-                    topcigar = str(query_st) + clipsyb
-                else:
-                    topcigar = ''
-                if((testseq_len - query_en) > 0):
-                    tailcigar = str(testseq_len - query_en) + clipsyb
-                else:
-                    tailcigar = ''
-                onemapinfolist.append((readid, contig, '-', query_st, query_en, target_st-refbias, target_en-refbias, mapq, topcigar+cigarstring+tailcigar))
-        return new_alignment_list, onemapinfolist
-    else:
-        for alignment in new_alignment_list:
-            contig = pos2contig(alignment[0][1], contig2start)
-            iloc += 1
-            refbias = contig2start[contig]
-            if(alignment[0][2] == 1):
-                query_st = alignment[0][0]
-                query_en = alignment[-1][0] + alignment[-1][3]
-                target_st = alignment[0][1]
-                target_en = alignment[-1][1] + alignment[-1][3]
-                if(query_st > 0):
-                    topcigar = str(query_st) + clipsyb
-                else:
-
-                    topcigar = ''
-                if((testseq_len - query_en) > 0):
-                    tailcigar = str(testseq_len - query_en) + clipsyb
-                else:
-                    tailcigar = ''
-                if(alignment[-1][3] > 0):
-                    tailcigar = str(int(alignment[-1][3]))+'M'+tailcigar
-                cigarstring = ''.join(cigarlist[iloc])
-                onemapinfolist.append((readid, contig, '-', query_st, query_en, target_st-refbias, target_en-refbias, mapq, topcigar+cigarstring+tailcigar))
-            else:
-                query_st = testseq_len-alignment[0][0]-alignment[0][3]
-                query_en = testseq_len-alignment[-1][0]
-                target_st = alignment[0][1]
-                target_en = alignment[-1][1] + alignment[-1][3]
-
-                cigarstring = ''.join(cigarlist[iloc])
-                if(query_st > 0):
-                    topcigar = str(query_st) + clipsyb
-                else:
-                    topcigar = ''
-                if((testseq_len - query_en) > 0):
-                    tailcigar = str(testseq_len - query_en) + clipsyb
-                else:
-                    tailcigar = ''
-                onemapinfolist.append((readid, contig, '+', query_st, query_en, target_st-refbias, target_en-refbias, mapq, topcigar+cigarstring+tailcigar))
-
+#09042024packnewne
+max_factor = 1000
+@njit
+def insertpoint_score(S_i, target_score, k, S_arg_i):
+    i = 0
+    j = k
+    if(S_i[S_arg_i[0]] > target_score):
+        return 0
+    if(S_i[S_arg_i[k - 1]] < target_score):
+        return k
+    while(i < j):
         
-        return new_alignment_list, onemapinfolist[::-1]
-def extend_func(raw_alignment_list, readid, mapq, testseq, rc_testseq, testseq_len, setting_kmersize, pos2contig, contig2start, contig2seq, setting_maxdiff, need_reverse, maxdiffratio, option, debug = False, H = False, nofilter = False, eqx = False):
+        mid = (i + j) // 2
 
-    TRA_signal = False
+        now_score = S_i[S_arg_i[mid]]
+        if(now_score < target_score):
+            i = mid + 1
+        elif(now_score > target_score):
+            j = mid
+        else:
+            return mid + 1
+    return j
+@njit            #one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500
+def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_all_64(one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500):
 
-    alignment_list = rebuild_chain_break(contig2start, raw_alignment_list, large_cost = setting_maxdiff, small_alignment = 50, small_dup = -100)
+    extra_size = len(extra) - 1
+    
+
 
     
-        
-    tmpiloc = -1
-    while((tmpiloc + 1) < len(alignment_list)):
-        tmpiloc += 1
-        preitem, nowitem = alignment_list[tmpiloc][0], alignment_list[tmpiloc][-1]
-        target, query, target_st, target_en, query_st, query_en = get_query_target_for_cigar(preitem, nowitem, testseq, rc_testseq, testseq_len, setting_kmersize, contig2seq, contig2start)
-        diffratio = edlib.align(query = query, target = target, task = 'distance')['editDistance']/min(len(target), len(query))
-        if((diffratio>maxdiffratio)):
-            alignment_list.pop(tmpiloc)
-            tmpiloc -= 1
+    gap_arr = np.empty(one_mapinfo[-1][0])#mark 1
+    gap_arr[0] = 200#mark 1
+    
+    g_max_scores = 0.
+    g_max_index = -1
+     
+    gapcost_list = np.zeros(maxdiff + 1, dtype = np.float64)
+    for gapcost in range(1, maxdiff + 1):
+
+        gapcost_list[gapcost] = (0.01 * kmersize * gapcost + 0.5 * np.log2(gapcost))
+
+    
+
+
+
+    n = len(one_mapinfo)
+    S = np.empty(n, np.float64)
+    P = np.empty(n, np.int64)
+
+
+
+    
+
+    
+
+
+    
+    
+
+
             
 
-        
-
-
-    extend_edge_test(testseq, testseq_len, alignment_list, setting_kmersize, pos2contig, contig2start, contig2seq, san = 1, debug = debug)
+    
+    
+    prereadloc = one_mapinfo[0][0]
 
 
     
-    o_alignment_list_len = len(alignment_list)
-    filtered = False
-    if((len(alignment_list) > 2) and (nofilter == False)):    
-        iloc = 0
-        while(iloc < (len(alignment_list) - 2)):
-            removed = drop_misplaced_alignment_test(alignment_list, iloc, debug = debug)
-            if(removed == True):
+
+    testspace_en = 1
+    
+    
+
+    
+    S_arg = np.empty(n, np.int64)
+    S_arg[0] = 0
+    
+    i = 0
+
+    S[i] = one_mapinfo[i][3]
+    P[i] = -9999999
+    g_max_scores = one_mapinfo[i][3]
+    g_max_index = i
+    
+
+    opcount = 0
+
+    
+    for i in range(1, n):
+        #print_log('start: S[0:'+str(i)+']', S[0:i])
+        
+
+
+        max_scores = one_mapinfo[i][3]
+
+        
+        pre_index = -9999999
+        
+
+        
+        
+        if(prereadloc < one_mapinfo[i][0]):
+            
+            if((opcount/i) > max_factor):#mark 1
+                return -1, S, P, S_arg, -1.#mark 1
+            
+            
+            k = testspace_en
+            while(k < i):
+                
+                loc_in_sorted_S = insertpoint_score(S, S[k], k, S_arg)
+
+                S_arg[loc_in_sorted_S + 1: k + 1] = S_arg[loc_in_sorted_S: k]
+                S_arg[loc_in_sorted_S] = k
+                
+                k += 1
+            
+            testspace_en = i
+            
+            
+            
+            gap_arr[prereadloc] = maxgap + 2*(one_mapinfo[i][0] - prereadloc)#mark 1
+            
+
+            
+            prereadloc = one_mapinfo[i][0]
+            
+               
+                      
+
+
+        
+        for j in S_arg[:testspace_en][::-1]:
+            
+            
+
+            
+            if(S[j] > (max_scores - one_mapinfo[i][3])):
+                
+                opcount += 1
+
+                readgap = (one_mapinfo[i][0] - one_mapinfo[j][0] - one_mapinfo[j][3])
+
+                if((readgap < 0)):
+                    bonus = one_mapinfo[i][0] + one_mapinfo[i][3] - one_mapinfo[j][0] - one_mapinfo[j][3]
+                    readgap = 0
+                    non_overlap_size = one_mapinfo[i][0] - one_mapinfo[j][0]
+                    if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                        if(one_mapinfo[i][2] == 1):
+                            refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - non_overlap_size)
+                        else:
+                            refgap = (one_mapinfo[j][1] + one_mapinfo[j][3] - non_overlap_size - one_mapinfo[i][1] - one_mapinfo[i][3])
+                    else:
+                        if(one_mapinfo[j][2] == -1):
+                            refgap = one_mapinfo[i][1] + one_mapinfo[j][3] - non_overlap_size - one_mapinfo[j][1]
+                        else:
+                            refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - one_mapinfo[j][1] - non_overlap_size
+
+                else:
+                    bonus = one_mapinfo[i][3]
+                    if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                        if(one_mapinfo[i][2] == 1):
+                            refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
+                        else:
+                            refgap = (one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3])
+                    else:
+                        if(one_mapinfo[j][2] == -1):
+                            refgap = one_mapinfo[i][1] - one_mapinfo[j][1]
+                        else:
+                            refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - one_mapinfo[j][1] - one_mapinfo[j][3]
+
+                gapcost = abs(readgap - refgap)
+
+
+                if(one_mapinfo[i][2] == one_mapinfo[j][2] and refgap >= 0 and readgap <= maxgap and gapcost <= maxdiff):
+
+
+                    test_scores = S[j] + bonus - gapcost_list[gapcost]
+
+
+                else:
+                    if(gapcost > extra_size):
+                        gapcost = extra_size
+                    test_scores = S[j] - skipcost + bonus# -  extra[gapcost]
+
+
+                if(test_scores > max_scores):
+                    max_scores = test_scores
+                    pre_index = j
+            else:
+                break
+                
+
+        S[i] = max_scores
+        P[i] = pre_index
+
+        if(max_scores > g_max_scores):
+
+            g_max_scores = max_scores
+            g_max_index = i
+       
+
+
+        
+    k = testspace_en
+    while(k < n):
+
+        loc_in_sorted_S = insertpoint_score(S, S[k], k, S_arg)
+
+        S_arg[loc_in_sorted_S + 1: k + 1] = S_arg[loc_in_sorted_S: k]
+        S_arg[loc_in_sorted_S] = k
+
+        k += 1
+
+    testspace_en = k  
+    
+
+    
+    return g_max_index, S, P, S_arg, 0
+@njit            #one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500
+def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_fast_all_64(one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500, fast_t = 5):
+
+    extra_size = len(extra) - 1
+    
+
+
+
+    
+    gap_arr = np.empty(one_mapinfo[-1][0])#mark 1
+    gap_arr[0] = 200#mark 1
+    
+    g_max_scores = 0.
+    g_max_index = -1
+     
+    gapcost_list = np.zeros(maxdiff + 1, dtype = np.float64)
+    for gapcost in range(1, maxdiff + 1):
+
+        gapcost_list[gapcost] = (0.01 * kmersize * gapcost + 0.5 * np.log2(gapcost))
+
+            
+
+    
+
+    n = len(one_mapinfo)
+    S = np.empty(n, np.float64)
+    S_i = np.empty(n, np.int64)
+    P = np.empty(n, np.int64)
+
+    
+
+    
+
+    
+    
+
+
+    readlength = one_mapinfo[-1][0] + 1000
+    target_arr = np.zeros(n, dtype = np.int64)
+    for i in range(n):
+
+
+        if(one_mapinfo[i][2] == 1):
+            target_arr[i] = one_mapinfo[i][1] - one_mapinfo[i][0] + readlength 
+        else:
+            target_arr[i] = -(one_mapinfo[i][1] + one_mapinfo[i][0] + readlength) 
+            
+
+    
+    prereadloc = one_mapinfo[0][0]
+
+    
+
+    testspace_en = 1
+    testspace_en_i = 1
+    
+    
+    
+    
+    S_arg_i = np.empty(n, np.int64)
+    S_arg_i[0] = 0
+    
+    i = 0
+
+    S[i] = one_mapinfo[i][3]
+    S_i[i] = one_mapinfo[i][3]
+    P[i] = -9999999
+    g_max_scores = one_mapinfo[i][3]
+    g_max_index = i
+    
+
+    
+    fast = False
+    
+    S_i_count = np.zeros(one_mapinfo[-1][0] + 50, dtype = np.int64)
+    S_i_count[one_mapinfo[i][3]] = 1
+    
+    max_score_i = 0
+    
+
+    
+    readpos_arr = one_mapinfo[:,0]
+    
+    for i in range(1, n):
+        #print_log('start: S[0:'+str(i)+']', S[0:i])
+
+        P[i] = -9999999
+        max_scores = one_mapinfo[i][3]
+        tmp_target_score = max_scores
+        
+        pre_index = -9999999
+        
+
+        
+        
+        if(prereadloc < one_mapinfo[i][0]):                
+
+                
+            k = testspace_en_i
+            while(k < i):
+                
+                S_i_count[S_i[k]] += 1
+                if(S_i[k] > max_score_i):
+                    max_score_i = S_i[k]
+                
+                loc_in_sorted_S = insertpoint_score_distance(S_i, S_i[k], k, S_arg_i, target_arr[k], target_arr)
+
+                S_arg_i[loc_in_sorted_S + 1: k + 1] = S_arg_i[loc_in_sorted_S: k]
+                S_arg_i[loc_in_sorted_S] = k
+                
+                k += 1
+
+            testspace_en_i = k
+            
+            
+            gap_arr[prereadloc] = maxgap + 2*(one_mapinfo[i][0] - prereadloc)#mark 1
+            
+
+
+            
+            prereadloc = one_mapinfo[i][0]
+            
+            
+            
+
+            
+            
+        c_score_i = max_score_i     
+        st_loc = testspace_en_i
+        en_loc = testspace_en_i
+        f_kmersize = one_mapinfo[i][3] + 1
+        while(c_score_i > (max_scores - f_kmersize)):
+            now_count = S_i_count[c_score_i]
+            if(now_count == 0):
+                c_score_i -= 1
                 continue
-            else:
-                iloc += 1
+            st_loc = en_loc - now_count
+            '''tmp_set = set()
+            tmp_set.add(-1)
+            if(st_loc < 0 or en_loc <= 0):
+                print('st_loc, en_loc', st_loc, en_loc)
+            for tmp_item in S[S_arg[st_loc: en_loc]]:
+                tmp_set.add(tmp_item//1)
+            if(len(tmp_set) != 2):
+                print(S[S_arg[st_loc: en_loc]])'''
+            if(now_count > fast_t):
                 
+
+                
+                #S_arg_j = closest2targetdistance(target_arr[i], target_arr, S_arg_i, st_loc, en_loc)
+                #S_arg_j = closest2target_1d_point_pos(target_arr, target_arr[i], st_loc, en_loc, S_arg_i, one_mapinfo[i][0], readpos_arr)
+                j = S_arg_i[closest2targetdistance(target_arr[i], target_arr, S_arg_i, st_loc, en_loc)]
     
 
-    
-    if(len(alignment_list) <  o_alignment_list_len):#fill the gap
-        filtered = True
-        st = time.time()
-        extend_edge_test(testseq, testseq_len, alignment_list, setting_kmersize, pos2contig, contig2start, contig2seq, san = 1, debug = debug)
 
+                #########
+                readgap = (one_mapinfo[i][0] - one_mapinfo[j][0] - one_mapinfo[j][3])
 
+                if((readgap < 0)):
+                    bonus = one_mapinfo[i][0] + one_mapinfo[i][3] - one_mapinfo[j][0] - one_mapinfo[j][3]
+                    readgap = 0
+                    non_overlap_size = one_mapinfo[i][0] - one_mapinfo[j][0]
+                    if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                        if(one_mapinfo[i][2] == 1):
+                            refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - non_overlap_size)
+                        else:
+                            refgap = (one_mapinfo[j][1] + one_mapinfo[j][3] - non_overlap_size - one_mapinfo[i][1] - one_mapinfo[i][3])
+                    else:
+                        if(one_mapinfo[j][2] == -1):
+                            refgap = one_mapinfo[i][1] + one_mapinfo[j][3] - non_overlap_size - one_mapinfo[j][1]
+                        else:
+                            refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - one_mapinfo[j][1] - non_overlap_size
 
-    merge_conjacent_alignment(alignment_list, contig2start)
-
-    fix_simple_inv(alignment_list, contig2start, contig2seq, testseq)
-
-    new_alignment_list = List()
-    cigarlist = []
-    for alignment in alignment_list: 
-
-        tmp_alignment_list, tmp_cigarlist = split_alignment_test(alignment, testseq, rc_testseq, testseq_len, kmersize=setting_kmersize , contig2seq = contig2seq, contig2start = contig2start, debug = debug, H = H, eqx = eqx)
-
-        iloc = -1
-        for alignment in tmp_alignment_list:
-            iloc += 1
-            new_alignment_list.append(alignment)
-            cigarlist.append(tmp_cigarlist[iloc])
-
-
-    alignment_list, onemapinfolist = get_onemapinfolist(new_alignment_list, cigarlist, readid, mapq, testseq_len, contig2start, need_reverse, option['H'])
-    return alignment_list, onemapinfolist, TRA_signal, filtered
-def get_readmap_DP_test(readid, testseq, contig2start, contig2seq, index_object, index2contig, option, kmersize = 15, local_kmersize = 9, local_maxdiff = 30, refine = True, local_skipcost = 59., golbal_skipcost = (45., 45.),  golbal_maxdiff = (30, 30), check_num = 20, bin_size = 100, hastra = False, debug = False, H = False, mid_occ = -1, redo_ratio = 5, eqx = False):
-    kmersize = index_object.k
-    golbal_skipcost = (option['golbal_skipcost'], option['golbal_skipcost'])
-    golbal_maxdiff = (option['golbal_maxdiff'], option['golbal_maxdiff'])
-    local_skipcost = option['local_skipcost']
-    local_maxdiff = option['local_maxdiff']
-
-    setting_kmersize = kmersize
-    setting_maxdiff = golbal_maxdiff[1]
-
-    
-
-    rc_testseq = str(Seq(testseq).reverse_complement())
-    testseq_len = len(testseq)
-                           
-    mapq, scores, raw_alignment_list, redo_flag = decode_hit(index_object, index2contig, testseq, testseq_len, contig2start, kmersize, contig2seq, skipcost = golbal_skipcost, maxdiff = golbal_maxdiff, maxgap = 200, check_num = check_num, c_bias = 5000, bin_size = bin_size, overlapprecentage = 0.5, hastra = hastra, H = H, mid_occ = mid_occ)
-
-
-
-    if(scores == 0.):
-        return [], ([], []), 0, redo_flag
-    
-    
-    if((scores < 0.)):
-        need_reverse = True
-    else:
-        need_reverse = False
-
-    setting_maxdiff = local_maxdiff
-    setting_kmersize = local_kmersize
-
-
-
-    raw_alignment_array = np.array(raw_alignment_list)
-    if(need_reverse == False):
-        scores, raw_alignment_list = get_localmap_multi_all_forDP_inv_guide(raw_alignment_array, testseq, rc_testseq, contig2start, contig2seq, kmersize = setting_kmersize, skipcost = local_skipcost, maxdiff = setting_maxdiff, maxgap = 99, shift = 1)
-
-    else:
-        scores, raw_alignment_list = get_localmap_multi_all_forDP_inv_guide(raw_alignment_array, rc_testseq, testseq, contig2start, contig2seq, kmersize = setting_kmersize, skipcost = local_skipcost, maxdiff = setting_maxdiff, maxgap = 99, shift = 1)
-        testseq, rc_testseq = rc_testseq, testseq
-
-    if(len(raw_alignment_list) <= 1):
-        return [], ([], []), 0, redo_flag
-
-
-
-    alignment_list, onemapinfolist, TRA_signal, filtered = extend_func(List(raw_alignment_list[::-1]), readid, mapq, testseq, rc_testseq, testseq_len, setting_kmersize, pos2contig, contig2start, contig2seq, setting_maxdiff, need_reverse, maxdiffratio = option['maxdivergence'], option = option, debug = debug, H = H, nofilter = option['nodiscard'], eqx = eqx)
-    if(len(onemapinfolist) == 0):
-        return [], ([], []), 0, redo_flag
-
-    
-    
-
-    if(option['nodiscard'] == False and filtered == True and pairedindel(List([line[-1] for line in onemapinfolist]), indelsize = 30) == True):
-        alignment_list, onemapinfolist, TRA_signal, filtered = extend_func(List(raw_alignment_list[::-1]), readid, mapq, testseq, rc_testseq, testseq_len, setting_kmersize, pos2contig, contig2start, contig2seq, setting_maxdiff, need_reverse, maxdiffratio = option['maxdivergence'], option = option, debug = debug, H = H, nofilter = True, eqx = eqx)
-        
-    
-
-    return onemapinfolist, (alignment_list, raw_alignment_list), TRA_signal, redo_flag
-#RG
-def get_bam_dict_str(mapinfo, query, qual, contig2iloc, contig2seq, md, shortcs, cigar2cg, markunbalancetra, option):
-    #'hhk',         ,  '1', '+', 11, 9192, 2767041, 2776138, 60
-    #      0            1    2   3    4      5         6      7
-    #'18_19897150_+', '18', '+', 0, 4776, 19832244, 19837393, 1]
-    if(markunbalancetra == True):
-        mapinfo = reassign_mapq(mapinfo)
-    else:
-        for iloc in range(len(mapinfo)):
-            mapinfo[iloc] = list(mapinfo[iloc])
-
-    
-    hardclip = option['H']
-    
-    rc_query = str(Seq(query).reverse_complement())
-    #mapinfo.sort(key = sort_by_length)
-    #mapinfo = mapinfo[::-1]
-    mapinfo.sort(key = sortbycontig)
-    iloc2nm = dict()
-    iloc2md = dict()
-    iloc2cs = dict()
-    iloc2n_cigar = dict()
-    tmpiloc = -1
-    if(md == False):
-        for item in mapinfo:
-            item[-1], n_cigar = mergecigar_n(item[-1])
-            tmpiloc += 1
-            if(item[2] == '+'):
-                nm = compute_NM_tag(query[item[3]: item[4]], get_refseq(item[1], item[5], item[6], contig2seq))
-            else:
-                nm = compute_NM_tag(rc_query[item[3]: item[4]], get_refseq(item[1], item[5], item[6], contig2seq))
-            iloc2nm[tmpiloc] = nm
-            iloc2n_cigar[tmpiloc] = n_cigar
-    else:
-        for item in mapinfo:
-            tmpiloc += 1
-            if(item[2] == '+'):
-                tmp_query = query[item[3]: item[4]]
-                tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
-            else:
-                tmp_query = rc_query[item[3]: item[4]]
-                tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
-            cigarstring, mdstring, csstring, n_cigar = mergecigar_md_cs(item[-1], tmp_target, tmp_query, shortcs)
-            nm = compute_NM_tag(tmp_query, tmp_target)
-            item[-1] = cigarstring
-            iloc2nm[tmpiloc] = nm
-            iloc2md[tmpiloc] = mdstring
-            iloc2cs[tmpiloc] = csstring
-            iloc2n_cigar[tmpiloc] = n_cigar
-
-    if((qual != None) and (len(qual) == len(query))):
-        query_qualities = qual
-        rc_query_qualities = query_qualities[::-1]
-    a_list = []
-    primary_iloc = 0
-    if(len(mapinfo) > 1):
-        if(mapinfo[0][7] == 1 and mapinfo[1][7] != 1):
-            primary_iloc = 1
-
-    #QNAME FLAG  RNAME  POS  MAPQ  CIGAR RNEXT  PNEXT  TLEN   SEQ   QUAL
-    for iloc in range(len(mapinfo)):
-        
-        bam_dict = dict()
-        if('rg-id' in option):
-            bam_dict['RG'] = option['rg-id']
-        primary = mapinfo[iloc]
-        bam_dict['QNAME'] = primary[0]
-        bam_dict['RNAME'] = primary[1]
-        if(iloc == primary_iloc):
-            base_value = 0
-        else:
-            base_value = 2048
-        if(primary[2] == '+'):
-            bam_dict['FLAG'] = str(base_value)
-
-        else:
-            bam_dict['FLAG'] = str(16 + base_value)
-
-
-        bam_dict['POS'] = str(primary[5] + 1)# SAM Format
-
-        if(iloc2n_cigar[iloc] > 65535):
-            if(cigar2cg == True):
-                bam_dict['CG'] = primary[8]
-                logging.info('Write long CIGAR to CG tag.')
-            else:
-                bam_dict['CIGAR'] = primary[8]
-        else:
-            bam_dict['CIGAR'] = primary[8]
-
-        if(len(mapinfo) > 1):
-            salist = []
-            tmpiloc = -1
-            for item in mapinfo:
-                tmpiloc += 1
-                if(tmpiloc == iloc):
-                    continue
-                mq = mapinfo[tmpiloc][7]
-                if(mq != 0):
-                    mq = 60
                 else:
-                    mq = 1
-                nm = iloc2nm[tmpiloc]
-                salist.append(''.join((item[1], ',', str(item[5]+1), ',', item[2], ',', item[8], ',', str(mq), ',', str(nm)+';')))
+                    bonus = one_mapinfo[i][3]
+                    if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                        if(one_mapinfo[i][2] == 1):
+                            refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
+                        else:
+                            refgap = (one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3])
+                    else:
+                        if(one_mapinfo[j][2] == -1):
+                            refgap = one_mapinfo[i][1] - one_mapinfo[j][1]
+                        else:
+                            refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - one_mapinfo[j][1] - one_mapinfo[j][3]
 
-            bam_dict['SA'] = ''.join(salist)
-        mq = mapinfo[iloc][7]
-        if(mq != 0):
-            mq = 60
-        else:
-            mq = 1
-        item = primary
-
-        bam_dict['MAPQ'] = str(mq)
-
-        if(item[2] == '+'):
-            if(hardclip == False):
-                bam_dict['SEQ'] = query
-                if((qual != None) and (len(qual) == len(query))):
-                    bam_dict['QUAL'] = query_qualities
-            else:
-                bam_dict['SEQ'] = query[item[3]: item[4]]
-                if((qual != None) and (len(qual) == len(query))):
-                    bam_dict['QUAL'] = query_qualities[item[3]: item[4]]
-                
-
+                gapcost = abs(readgap - refgap)
             
-        else:
-            if(hardclip == False):
-                bam_dict['SEQ'] = rc_query
-                if((qual != None) and (len(qual) == len(query))):
-                    bam_dict['QUAL'] = rc_query_qualities
-            else:
-                bam_dict['SEQ'] = rc_query[item[3]: item[4]]
-                if((qual != None) and (len(qual) == len(query))):
-                    bam_dict['QUAL'] = rc_query_qualities[item[3]: item[4]]
 
-            
-        bam_dict['NM'] = iloc2nm[iloc]
-        if(md == True):
-            bam_dict['MD'] = iloc2md[iloc]
-            bam_dict['cs'] = iloc2cs[iloc]
-
-        a_list.append(P_alignmentstring(bam_dict))
-    return a_list
-def get_bam_dict_str_comments(mapinfo, query, qual, comments, contig2iloc, contig2seq, md, shortcs, cigar2cg, markunbalancetra, option):
-    #'hhk',         ,  '1', '+', 11, 9192, 2767041, 2776138, 60
-    #      0            1    2   3    4      5         6      7
-    #'18_19897150_+', '18', '+', 0, 4776, 19832244, 19837393, 1]
-    if(markunbalancetra == True):
-        mapinfo = reassign_mapq(mapinfo)
-    else:
-        for iloc in range(len(mapinfo)):
-            mapinfo[iloc] = list(mapinfo[iloc])
-
-    
-    hardclip = option['H']
-    
-    rc_query = str(Seq(query).reverse_complement())
-    #mapinfo.sort(key = sort_by_length)
-    #mapinfo = mapinfo[::-1]
-    mapinfo.sort(key = sortbycontig)
-    iloc2nm = dict()
-    iloc2md = dict()
-    iloc2cs = dict()
-    iloc2n_cigar = dict()
-    tmpiloc = -1
-    if(md == False):
-        for item in mapinfo:
-            item[-1], n_cigar = mergecigar_n(item[-1])
-            tmpiloc += 1
-            if(item[2] == '+'):
-                nm = compute_NM_tag(query[item[3]: item[4]], get_refseq(item[1], item[5], item[6], contig2seq))
-            else:
-                nm = compute_NM_tag(rc_query[item[3]: item[4]], get_refseq(item[1], item[5], item[6], contig2seq))
-            iloc2nm[tmpiloc] = nm
-            iloc2n_cigar[tmpiloc] = n_cigar
-    else:
-        for item in mapinfo:
-            tmpiloc += 1
-            if(item[2] == '+'):
-                tmp_query = query[item[3]: item[4]]
-                tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
-            else:
-                tmp_query = rc_query[item[3]: item[4]]
-                tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
-            cigarstring, mdstring, csstring, n_cigar = mergecigar_md_cs(item[-1], tmp_target, tmp_query, shortcs)
-            nm = compute_NM_tag(tmp_query, tmp_target)
-            item[-1] = cigarstring
-            iloc2nm[tmpiloc] = nm
-            iloc2md[tmpiloc] = mdstring
-            iloc2cs[tmpiloc] = csstring
-            iloc2n_cigar[tmpiloc] = n_cigar
-
-    if((qual != None) and (len(qual) == len(query))):
-        query_qualities = qual
-        rc_query_qualities = query_qualities[::-1]
-    a_list = []
-    primary_iloc = 0
-    if(len(mapinfo) > 1):
-        if(mapinfo[0][7] == 1 and mapinfo[1][7] != 1):
-            primary_iloc = 1
-
-    #QNAME FLAG  RNAME  POS  MAPQ  CIGAR RNEXT  PNEXT  TLEN   SEQ   QUAL
-    for iloc in range(len(mapinfo)):
-        
-        bam_dict = dict()
-        if('rg-id' in option):
-            bam_dict['RG'] = option['rg-id']
-        primary = mapinfo[iloc]
-        bam_dict['QNAME'] = primary[0]
-        bam_dict['RNAME'] = primary[1]
-        if(iloc == primary_iloc):
-            base_value = 0
-        else:
-            base_value = 2048
-        if(primary[2] == '+'):
-            bam_dict['FLAG'] = str(base_value)
-
-        else:
-            bam_dict['FLAG'] = str(16 + base_value)
+                if(one_mapinfo[i][2] == one_mapinfo[j][2] and refgap >= 0 and readgap <= maxgap and gapcost <= maxdiff):
 
 
-        bam_dict['POS'] = str(primary[5] + 1)# SAM Format
+                    test_scores = S[j] + bonus - gapcost_list[gapcost]
 
-        if(iloc2n_cigar[iloc] > 65535):
-            if(cigar2cg == True):
-                bam_dict['CG'] = primary[8]
-                logging.info('Write long CIGAR to CG tag.')
-            else:
-                bam_dict['CIGAR'] = primary[8]
-        else:
-            bam_dict['CIGAR'] = primary[8]
 
-        if(len(mapinfo) > 1):
-            salist = []
-            tmpiloc = -1
-            for item in mapinfo:
-                tmpiloc += 1
-                if(tmpiloc == iloc):
-                    continue
-                mq = mapinfo[tmpiloc][7]
-                if(mq != 0):
-                    mq = 60
                 else:
-                    mq = 1
-                nm = iloc2nm[tmpiloc]
-                salist.append(''.join((item[1], ',', str(item[5]+1), ',', item[2], ',', item[8], ',', str(mq), ',', str(nm)+';')))
-
-            bam_dict['SA'] = ''.join(salist)
-        mq = mapinfo[iloc][7]
-        if(mq != 0):
-            mq = 60
-        else:
-            mq = 1
-        item = primary
-
-        bam_dict['MAPQ'] = str(mq)
+                    if(gapcost > extra_size):
+                        gapcost = extra_size
+                    test_scores = S[j] - skipcost + bonus# -  extra[gapcost]
+                if(test_scores > max_scores):
+                    max_scores = test_scores
+                    pre_index = j
+                    
 
 
-        if(item[2] == '+'):
-            if(hardclip == False):
-                bam_dict['SEQ'] = query
-                if((qual != None) and (len(qual) == len(query))):
-                    bam_dict['QUAL'] = query_qualities
-            else:
-                bam_dict['SEQ'] = query[item[3]: item[4]]
-                if((qual != None) and (len(qual) == len(query))):
-                    bam_dict['QUAL'] = query_qualities[item[3]: item[4]]
                 
+            else:
+                tmp_j = en_loc - 1
+                while(tmp_j >= st_loc):
+                    
+
+                    
+                    j = S_arg_i[tmp_j]
+                    tmp_j -= 1
+                #for j in S_arg[st_loc: en_loc][::-1]:
+            
+                    #S_arg_j = closest2target_1d_point_pos(target_arr, target_arr[i], st_loc, en_loc, S_arg_i, one_mapinfo[i][0], readpos_arr)
+
+                    readgap = (one_mapinfo[i][0] - one_mapinfo[j][0] - one_mapinfo[j][3])
+
+                    if((readgap < 0)):
+                        bonus = one_mapinfo[i][0] + one_mapinfo[i][3] - one_mapinfo[j][0] - one_mapinfo[j][3]
+                        readgap = 0
+                        non_overlap_size = one_mapinfo[i][0] - one_mapinfo[j][0]
+                        if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                            if(one_mapinfo[i][2] == 1):
+                                refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - non_overlap_size)
+                            else:
+                                refgap = (one_mapinfo[j][1] + one_mapinfo[j][3] - non_overlap_size - one_mapinfo[i][1] - one_mapinfo[i][3])
+                        else:
+                            if(one_mapinfo[j][2] == -1):
+                                refgap = one_mapinfo[i][1] + one_mapinfo[j][3] - non_overlap_size - one_mapinfo[j][1]
+                            else:
+                                refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - one_mapinfo[j][1] - non_overlap_size
+
+                    else:
+                        bonus = one_mapinfo[i][3]
+                        if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                            if(one_mapinfo[i][2] == 1):
+                                refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
+                            else:
+                                refgap = (one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3])
+                        else:
+                            if(one_mapinfo[j][2] == -1):
+                                refgap = one_mapinfo[i][1] - one_mapinfo[j][1]
+                            else:
+                                refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - one_mapinfo[j][1] - one_mapinfo[j][3]
+
+                    gapcost = abs(readgap - refgap)
+
+
+                    if(one_mapinfo[i][2] == one_mapinfo[j][2] and refgap >= 0 and readgap <= maxgap and gapcost <= maxdiff):
+
+
+                        test_scores = S[j] + bonus - gapcost_list[gapcost]
+
+
+                    else:
+                        if(gapcost > extra_size):
+                            gapcost = extra_size
+                        test_scores = S[j] - skipcost + bonus# -  extra[gapcost]
+                    if(test_scores > max_scores):
+                        max_scores = test_scores
+                        pre_index = j
+                        
+            en_loc = st_loc
+            
+            c_score_i -= 1
 
             
-        else:
-            if(hardclip == False):
-                bam_dict['SEQ'] = rc_query
-                if((qual != None) and (len(qual) == len(query))):
-                    bam_dict['QUAL'] = rc_query_qualities
-            else:
-                bam_dict['SEQ'] = rc_query[item[3]: item[4]]
-                if((qual != None) and (len(qual) == len(query))):
-                    bam_dict['QUAL'] = rc_query_qualities[item[3]: item[4]]
-        bam_dict['NM'] = iloc2nm[iloc]
-        if(md == True):
-            bam_dict['MD'] = iloc2md[iloc]
-            bam_dict['cs'] = iloc2cs[iloc]
+                
+                
+                
+                    
+        
 
-        a_list.append(P_alignmentstring_comments(bam_dict, comments))
-    return a_list
+        S[i] = max_scores
+        S_i[i] = max_scores
+        P[i] = pre_index
+
+        if(max_scores > g_max_scores):
+
+            g_max_scores = max_scores
+            g_max_index = i
+
+        
+
+    k = testspace_en_i
+    while(k < n):
+
+        S_i_count[S_i[k]] += 1
+        if(S_i[k] > max_score_i):
+            max_score_i = S_i[k]
+
+        loc_in_sorted_S = insertpoint_score_distance(S_i, S_i[k], k, S_arg_i, target_arr[k], target_arr)
+
+        S_arg_i[loc_in_sorted_S + 1: k + 1] = S_arg_i[loc_in_sorted_S: k]
+        S_arg_i[loc_in_sorted_S] = k
+
+        k += 1
+
+    
+    return g_max_index, S, P, S_arg_i
+@njit            #one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500
+def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_all(one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500):
+
+    extra_size = len(extra) - 1
+    
+
+
+    
+    gap_arr = np.empty(one_mapinfo[-1][0])#mark 1
+    gap_arr[0] = 200#mark 1
+    
+    g_max_scores = 0.
+    g_max_index = -1
+     
+    gapcost_list = np.zeros(maxdiff + 1, dtype = np.float64)
+    for gapcost in range(1, maxdiff + 1):
+
+        gapcost_list[gapcost] = (0.01 * kmersize * gapcost + 0.5 * np.log2(gapcost))
+
+    
+
+
+
+    n = len(one_mapinfo)
+    S = np.empty(n, np.float64)
+    P = np.empty(n, np.int32)
+
+
+
+            
+
+    
+    
+    prereadloc = one_mapinfo[0][0]
+
+
+    
+
+    testspace_en = 1
+    
+    
+
+    
+    S_arg = np.empty(n, np.int32)
+    S_arg[0] = 0
+    
+    i = 0
+
+    S[i] = one_mapinfo[i][3]
+    P[i] = -9999999
+    g_max_scores = one_mapinfo[i][3]
+    g_max_index = i
+    
+
+    
+    opcount = 0
+    
+    for i in range(1, n):
+        #print_log('start: S[0:'+str(i)+']', S[0:i])
+        
+
+
+        max_scores = one_mapinfo[i][3]
+
+        
+        pre_index = -9999999
+        
+
+        
+        
+        if(prereadloc < one_mapinfo[i][0]):
+            
+            if((opcount/i) > max_factor):#mark 1
+                return -1, S, P, S_arg, -1.#mark 1
+            
+            
+            k = testspace_en
+            while(k < i):
+                
+                loc_in_sorted_S = insertpoint_score(S, S[k], k, S_arg)
+
+                S_arg[loc_in_sorted_S + 1: k + 1] = S_arg[loc_in_sorted_S: k]
+                S_arg[loc_in_sorted_S] = k
+                
+                k += 1
+            
+            testspace_en = i
+            
+            
+            
+            gap_arr[prereadloc] = maxgap + 2*(one_mapinfo[i][0] - prereadloc)#mark 1
+            
+            
+            prereadloc = one_mapinfo[i][0]
+            
+               
+                      
+
+
+        
+        for j in S_arg[:testspace_en][::-1]:
+            
+            
+
+            
+            if(S[j] > (max_scores - one_mapinfo[i][3])):
+                
+                opcount += 1
+
+                readgap = (one_mapinfo[i][0] - one_mapinfo[j][0] - one_mapinfo[j][3])
+
+                if((readgap < 0)):
+                    bonus = one_mapinfo[i][0] + one_mapinfo[i][3] - one_mapinfo[j][0] - one_mapinfo[j][3]
+                    readgap = 0
+                    non_overlap_size = one_mapinfo[i][0] - one_mapinfo[j][0]
+                    if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                        if(one_mapinfo[i][2] == 1):
+                            refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - non_overlap_size)
+                        else:
+                            refgap = (one_mapinfo[j][1] + one_mapinfo[j][3] - non_overlap_size - one_mapinfo[i][1] - one_mapinfo[i][3])
+                    else:
+                        if(one_mapinfo[j][2] == -1):
+                            refgap = one_mapinfo[i][1] + one_mapinfo[j][3] - non_overlap_size - one_mapinfo[j][1]
+                        else:
+                            refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - one_mapinfo[j][1] - non_overlap_size
+
+                else:
+                    bonus = one_mapinfo[i][3]
+                    if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                        if(one_mapinfo[i][2] == 1):
+                            refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
+                        else:
+                            refgap = (one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3])
+                    else:
+                        if(one_mapinfo[j][2] == -1):
+                            refgap = one_mapinfo[i][1] - one_mapinfo[j][1]
+                        else:
+                            refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - one_mapinfo[j][1] - one_mapinfo[j][3]
+
+                gapcost = abs(readgap - refgap)
+
+
+                if(one_mapinfo[i][2] == one_mapinfo[j][2] and refgap >= 0 and readgap <= maxgap and gapcost <= maxdiff):
+
+
+                    test_scores = S[j] + bonus - gapcost_list[gapcost]
+
+
+                else:
+                    if(gapcost > extra_size):
+                        gapcost = extra_size
+                    test_scores = S[j] - skipcost + bonus# -  extra[gapcost]
+
+
+                if(test_scores > max_scores):
+                    max_scores = test_scores
+                    pre_index = j
+            else:
+                break
+                
+
+        S[i] = max_scores
+        P[i] = pre_index
+
+        if(max_scores > g_max_scores):
+
+            g_max_scores = max_scores
+            g_max_index = i
+       
+
+
+        
+    k = testspace_en
+    while(k < n):
+
+        loc_in_sorted_S = insertpoint_score(S, S[k], k, S_arg)
+
+        S_arg[loc_in_sorted_S + 1: k + 1] = S_arg[loc_in_sorted_S: k]
+        S_arg[loc_in_sorted_S] = k
+
+        k += 1
+
+    testspace_en = k  
+    
+
+    
+    return g_max_index, S, P, S_arg, 0
+@njit            #one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500
+def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_fast_all(one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500, fast_t = 5):
+
+    extra_size = len(extra) - 1
+    
+
+
+    
+    gap_arr = np.empty(one_mapinfo[-1][0])#mark 1
+    gap_arr[0] = 200#mark 1
+    
+    g_max_scores = 0.
+    g_max_index = -1
+     
+    gapcost_list = np.zeros(maxdiff + 1, dtype = np.float64)
+    for gapcost in range(1, maxdiff + 1):
+
+        gapcost_list[gapcost] = (0.01 * kmersize * gapcost + 0.5 * np.log2(gapcost))
+
+            
+
+    
+
+    n = len(one_mapinfo)
+    S = np.empty(n, np.float64)
+    S_i = np.empty(n, np.int64)
+    P = np.empty(n, np.int32)
+
+    
+
+    
+
+    
+
+    readlength = one_mapinfo[-1][0] + 1000
+    target_arr = np.zeros(n, dtype = np.int64)
+    for i in range(n):
+
+        if(one_mapinfo[i][2] == 1):
+            target_arr[i] = one_mapinfo[i][1] - one_mapinfo[i][0] + readlength 
+        else:
+            target_arr[i] = -(one_mapinfo[i][1] + one_mapinfo[i][0] + readlength) 
+            
+
+    
+    prereadloc = one_mapinfo[0][0]
+
+    
+
+    testspace_en = 1
+    testspace_en_i = 1
+    
+    
+    
+    
+    S_arg_i = np.empty(n, np.int32)
+    S_arg_i[0] = 0
+    
+    i = 0
+
+    S[i] = one_mapinfo[i][3]
+    S_i[i] = one_mapinfo[i][3]
+    P[i] = -9999999
+    g_max_scores = one_mapinfo[i][3]
+    g_max_index = i
+    
+
+    
+    fast = False
+    
+    S_i_count = np.zeros(one_mapinfo[-1][0] + 50, dtype = np.int64)
+    S_i_count[one_mapinfo[i][3]] = 1
+    
+    max_score_i = 0
+    
+
+    
+    readpos_arr = one_mapinfo[:,0]
+    
+    for i in range(1, n):
+        #print_log('start: S[0:'+str(i)+']', S[0:i])
+
+        P[i] = -9999999
+        max_scores = one_mapinfo[i][3]
+        tmp_target_score = max_scores
+        
+        pre_index = -9999999
+        
+
+        
+        
+        if(prereadloc < one_mapinfo[i][0]):                
+
+                
+            k = testspace_en_i
+            while(k < i):
+                
+                S_i_count[S_i[k]] += 1
+                if(S_i[k] > max_score_i):
+                    max_score_i = S_i[k]
+                
+                loc_in_sorted_S = insertpoint_score_distance(S_i, S_i[k], k, S_arg_i, target_arr[k], target_arr)
+
+                S_arg_i[loc_in_sorted_S + 1: k + 1] = S_arg_i[loc_in_sorted_S: k]
+                S_arg_i[loc_in_sorted_S] = k
+                
+                k += 1
+
+            testspace_en_i = k
+            
+            
+            gap_arr[prereadloc] = maxgap + 2*(one_mapinfo[i][0] - prereadloc)#mark 1
+            
+
+            
+            prereadloc = one_mapinfo[i][0]
+            
+            
+            
+
+            
+            
+        c_score_i = max_score_i     
+        st_loc = testspace_en_i
+        en_loc = testspace_en_i
+        f_kmersize = one_mapinfo[i][3] + 1
+        while(c_score_i > (max_scores - f_kmersize)):
+            now_count = S_i_count[c_score_i]
+            if(now_count == 0):
+                c_score_i -= 1
+                continue
+            st_loc = en_loc - now_count
+            '''tmp_set = set()
+            tmp_set.add(-1)
+            if(st_loc < 0 or en_loc <= 0):
+                print('st_loc, en_loc', st_loc, en_loc)
+            for tmp_item in S[S_arg[st_loc: en_loc]]:
+                tmp_set.add(tmp_item//1)
+            if(len(tmp_set) != 2):
+                print(S[S_arg[st_loc: en_loc]])'''
+            if(now_count > fast_t):
+                
+
+                
+                #S_arg_j = closest2targetdistance(target_arr[i], target_arr, S_arg_i, st_loc, en_loc)
+                #S_arg_j = closest2target_1d_point_pos(target_arr, target_arr[i], st_loc, en_loc, S_arg_i, one_mapinfo[i][0], readpos_arr)
+                j = S_arg_i[closest2targetdistance(target_arr[i], target_arr, S_arg_i, st_loc, en_loc)]
+    
+
+
+                #########
+                readgap = (one_mapinfo[i][0] - one_mapinfo[j][0] - one_mapinfo[j][3])
+
+                if((readgap < 0)):
+                    bonus = one_mapinfo[i][0] + one_mapinfo[i][3] - one_mapinfo[j][0] - one_mapinfo[j][3]
+                    readgap = 0
+                    non_overlap_size = one_mapinfo[i][0] - one_mapinfo[j][0]
+                    if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                        if(one_mapinfo[i][2] == 1):
+                            refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - non_overlap_size)
+                        else:
+                            refgap = (one_mapinfo[j][1] + one_mapinfo[j][3] - non_overlap_size - one_mapinfo[i][1] - one_mapinfo[i][3])
+                    else:
+                        if(one_mapinfo[j][2] == -1):
+                            refgap = one_mapinfo[i][1] + one_mapinfo[j][3] - non_overlap_size - one_mapinfo[j][1]
+                        else:
+                            refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - one_mapinfo[j][1] - non_overlap_size
+
+                else:
+                    bonus = one_mapinfo[i][3]
+                    if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                        if(one_mapinfo[i][2] == 1):
+                            refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
+                        else:
+                            refgap = (one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3])
+                    else:
+                        if(one_mapinfo[j][2] == -1):
+                            refgap = one_mapinfo[i][1] - one_mapinfo[j][1]
+                        else:
+                            refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - one_mapinfo[j][1] - one_mapinfo[j][3]
+
+                gapcost = abs(readgap - refgap)
+            
+
+                if(one_mapinfo[i][2] == one_mapinfo[j][2] and refgap >= 0 and readgap <= maxgap and gapcost <= maxdiff):
+
+
+                    test_scores = S[j] + bonus - gapcost_list[gapcost]
+
+
+                else:
+                    if(gapcost > extra_size):
+                        gapcost = extra_size
+                    test_scores = S[j] - skipcost + bonus# -  extra[gapcost]
+                if(test_scores > max_scores):
+                    max_scores = test_scores
+                    pre_index = j
+                    
+
+
+                
+            else:
+                tmp_j = en_loc - 1
+                while(tmp_j >= st_loc):
+                    
+
+                    
+                    j = S_arg_i[tmp_j]
+                    tmp_j -= 1
+                #for j in S_arg[st_loc: en_loc][::-1]:
+            
+                    #S_arg_j = closest2target_1d_point_pos(target_arr, target_arr[i], st_loc, en_loc, S_arg_i, one_mapinfo[i][0], readpos_arr)
+
+                    readgap = (one_mapinfo[i][0] - one_mapinfo[j][0] - one_mapinfo[j][3])
+
+                    if((readgap < 0)):
+                        bonus = one_mapinfo[i][0] + one_mapinfo[i][3] - one_mapinfo[j][0] - one_mapinfo[j][3]
+                        readgap = 0
+                        non_overlap_size = one_mapinfo[i][0] - one_mapinfo[j][0]
+                        if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                            if(one_mapinfo[i][2] == 1):
+                                refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - non_overlap_size)
+                            else:
+                                refgap = (one_mapinfo[j][1] + one_mapinfo[j][3] - non_overlap_size - one_mapinfo[i][1] - one_mapinfo[i][3])
+                        else:
+                            if(one_mapinfo[j][2] == -1):
+                                refgap = one_mapinfo[i][1] + one_mapinfo[j][3] - non_overlap_size - one_mapinfo[j][1]
+                            else:
+                                refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - one_mapinfo[j][1] - non_overlap_size
+
+                    else:
+                        bonus = one_mapinfo[i][3]
+                        if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                            if(one_mapinfo[i][2] == 1):
+                                refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
+                            else:
+                                refgap = (one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3])
+                        else:
+                            if(one_mapinfo[j][2] == -1):
+                                refgap = one_mapinfo[i][1] - one_mapinfo[j][1]
+                            else:
+                                refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - one_mapinfo[j][1] - one_mapinfo[j][3]
+
+                    gapcost = abs(readgap - refgap)
+
+
+                    if(one_mapinfo[i][2] == one_mapinfo[j][2] and refgap >= 0 and readgap <= maxgap and gapcost <= maxdiff):
+
+
+                        test_scores = S[j] + bonus - gapcost_list[gapcost]
+
+
+                    else:
+                        if(gapcost > extra_size):
+                            gapcost = extra_size
+                        test_scores = S[j] - skipcost + bonus# -  extra[gapcost]
+                    if(test_scores > max_scores):
+                        max_scores = test_scores
+                        pre_index = j
+                        
+            en_loc = st_loc
+            
+            c_score_i -= 1
+
+            
+                
+                
+                
+                    
+        
+
+        S[i] = max_scores
+        S_i[i] = max_scores
+        P[i] = pre_index
+
+        if(max_scores > g_max_scores):
+
+            g_max_scores = max_scores
+            g_max_index = i
+
+        
+
+    k = testspace_en_i
+    while(k < n):
+
+        S_i_count[S_i[k]] += 1
+        if(S_i[k] > max_score_i):
+            max_score_i = S_i[k]
+
+        loc_in_sorted_S = insertpoint_score_distance(S_i, S_i[k], k, S_arg_i, target_arr[k], target_arr)
+
+        S_arg_i[loc_in_sorted_S + 1: k + 1] = S_arg_i[loc_in_sorted_S: k]
+        S_arg_i[loc_in_sorted_S] = k
+
+        k += 1
+
+    
+    return g_max_index, S, P, S_arg_i
