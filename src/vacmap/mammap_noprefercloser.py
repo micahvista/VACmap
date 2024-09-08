@@ -21022,3 +21022,315 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_d_fast_all(o
 
     
     return g_max_index, S, P, S_arg_i
+
+#09082024
+def split_alignment_test(alignment, testseq, rc_testseq, testseq_len, kmersize, contig2seq, contig2start, debug, H = False, eqx = False):#no big cost >30
+    #print_log(alignment_list)
+    
+    cigartime = 0
+    droptime = 0
+    testtime = 0
+    splittime = 0
+    
+    cigarlist = []
+
+    gap_open_extend = -4
+    gap_extend_extend = -4
+    zdrop_value_extend = 100
+
+
+    gap_open_drop = -4
+    gap_extend_drop = -2
+    zdrop_value_drop = 400 #{clr,ccs}:200, {nano}:400
+    merge_smallgap = 300
+    
+    min_gap_forcigar = 200
+
+    new_alignment = List()
+    cigarlist = []
+    preDEL, preINS = False, False
+    if(alignment[0][2] == 1):
+        iloc = -1
+        if(alignment[iloc][3] != 0):
+            alignment[iloc] = (alignment[iloc][0]+alignment[iloc][3], alignment[iloc][1]+alignment[iloc][3], 1, 0)
+        nowitem = alignment[0]
+        new_alignment.append(List([nowitem]))
+        preitem = nowitem
+        cigarlist.append([])
+        iloc = 1
+        while(iloc < len(alignment)):
+            nowitem = alignment[iloc]
+            readgap = nowitem[0] - preitem[0] - preitem[3]
+            refgap = nowitem[1] - preitem[1] - preitem[3]
+
+            if((nowitem[3] < 19) or (min(readgap, refgap) < min_gap_forcigar)):
+                if(iloc +1 != len(alignment)):
+                    iloc += 1
+                    continue
+            
+            #print_log(preitem, nowitem)#
+            target, query, target_st, target_en, query_st, query_en = get_query_target_for_cigar(preitem, nowitem, testseq, rc_testseq, testseq_len, kmersize, contig2seq, contig2start)
+            if(len(target) > 0 and len(query) >0):
+
+                
+                cigarstring, zdropedcode, q_e, t_e, tmpdelcount, tmpinscount = mp.k_cigar(target, query, match = 2, mismatch = -4, gap_open_1 = 4, gap_extend_1 = 2, gap_open_2 = 24, gap_extend_2 = 1, bw=-1, zdropvalue=-1, eqx = eqx)
+                
+                new_alignment[-1].append(nowitem)
+                cigarlist[-1].append(cigarstring)
+                    #print_log(cigarstring)#
+            else:
+                logging.error("ERROR: Failed to compute CIGAR ")
+                raise Exception("ERROR: Failed to compute CIGAR ")
+
+            preitem = nowitem
+            iloc += 1
+        if(cigarlist[-1] == []):
+            logging.error("ERROR: Failed to compute CIGAR ")
+            raise Exception("ERROR: Failed to compute CIGAR ")
+
+
+        return new_alignment, cigarlist
+    else:
+        
+        if(alignment[0][3] != 0):
+            alignment[0] = (alignment[0][0], alignment[0][1] + alignment[0][3], -1, 0)
+        if(alignment[-1][3] != 0):
+            alignment[-1] = (alignment[-1][0] + alignment[-1][3], alignment[-1][1], -1, 0)
+        
+        alignment = alignment[::-1]
+        nowitem = alignment[0]
+        new_alignment.append(List([nowitem]))
+        preitem = nowitem
+        cigarlist.append([])
+        iloc = 1
+        while(iloc < len(alignment)):
+            nowitem = alignment[iloc]
+            readgap = preitem[0] - nowitem[0] - nowitem[3]
+            refgap = nowitem[1]  - preitem[1] - preitem[3]
+            
+            if((nowitem[3] < 19) or (min(readgap, refgap) < min_gap_forcigar)):
+                if(iloc +1 != len(alignment)):
+                    iloc += 1
+                    continue
+            #print_log(preitem, nowitem)
+            target, query, target_st, target_en, query_st, query_en = get_query_target_for_cigar(nowitem, preitem, testseq, rc_testseq, testseq_len, kmersize, contig2seq, contig2start)
+            if(len(target) > 0 and len(query) >0):
+                cigarstring, zdropedcode, q_e, t_e, tmpdelcount, tmpinscount = mp.k_cigar(target, query, match = 2, mismatch = -4, gap_open_1 = 4, gap_extend_1 = 2, gap_open_2 = 24, gap_extend_2 = 1, bw=-1, zdropvalue=-1, eqx = eqx)
+                
+                new_alignment[-1].append(nowitem)
+                cigarlist[-1].append(cigarstring)
+                    #print_log(cigarstring)#
+            else:
+                logging.error("ERROR: Failed to compute CIGAR ")
+                raise Exception("ERROR: Failed to compute CIGAR ")
+
+
+
+            preitem = nowitem
+            iloc += 1
+        if(cigarlist[-1] == []):
+            logging.error("ERROR: Failed to compute CIGAR ")
+            raise Exception("ERROR: Failed to compute CIGAR ")
+
+        return new_alignment, cigarlist
+def get_onemapinfolist(new_alignment_list, cigarlist, readid, mapq, testseq_len, contig2start, need_reverse, use_hardclip):
+    if(use_hardclip == True):
+        clipsyb = 'H'
+    else:
+        clipsyb = 'S'
+    onemapinfolist = []
+    iloc = -1
+    if(need_reverse == False):
+        for alignment in new_alignment_list:
+            contig = pos2contig(alignment[0][1], contig2start)
+            iloc += 1
+            refbias = contig2start[contig]
+            if(alignment[0][2] == 1):
+                query_st = alignment[0][0]
+                query_en = alignment[-1][0] + alignment[-1][3]
+                target_st = alignment[0][1]
+                target_en = alignment[-1][1] + alignment[-1][3]
+                if(query_st > 0):
+                    topcigar = str(query_st) + clipsyb
+                else:
+
+                    topcigar = ''
+                if((testseq_len - query_en) > 0):
+                    tailcigar = str(testseq_len - query_en) + clipsyb
+                else:
+                    tailcigar = ''
+                if(alignment[-1][3] > 0):
+                    tailcigar = str(int(alignment[-1][3]))+'M'+tailcigar
+                cigarstring = ''.join(cigarlist[iloc])
+                onemapinfolist.append((readid, contig, '+', query_st, query_en, target_st-refbias, target_en-refbias, mapq, topcigar+cigarstring+tailcigar))
+            else:
+                query_st = testseq_len-alignment[0][0]-alignment[0][3]
+                query_en = testseq_len-alignment[-1][0]
+                target_st = alignment[0][1]
+                target_en = alignment[-1][1] + alignment[-1][3]
+
+                cigarstring = ''.join(cigarlist[iloc])
+                if(query_st > 0):
+                    topcigar = str(query_st) + clipsyb
+                else:
+                    topcigar = ''
+                if((testseq_len - query_en) > 0):
+                    tailcigar = str(testseq_len - query_en) + clipsyb
+                else:
+                    tailcigar = ''
+                onemapinfolist.append((readid, contig, '-', query_st, query_en, target_st-refbias, target_en-refbias, mapq, topcigar+cigarstring+tailcigar))
+        for line in onemapinfolist:
+            if(testseq_len != len(Cigar(line[-1]))):
+                logging.error('testseq_len != Cigar(line[-1])')
+                raise Exception('testseq_len != Cigar(line[-1])')
+        return new_alignment_list, onemapinfolist
+    else:
+        for alignment in new_alignment_list:
+            contig = pos2contig(alignment[0][1], contig2start)
+            iloc += 1
+            refbias = contig2start[contig]
+            if(alignment[0][2] == 1):
+                query_st = alignment[0][0]
+                query_en = alignment[-1][0] + alignment[-1][3]
+                target_st = alignment[0][1]
+                target_en = alignment[-1][1] + alignment[-1][3]
+                if(query_st > 0):
+                    topcigar = str(query_st) + clipsyb
+                else:
+
+                    topcigar = ''
+                if((testseq_len - query_en) > 0):
+                    tailcigar = str(testseq_len - query_en) + clipsyb
+                else:
+                    tailcigar = ''
+                if(alignment[-1][3] > 0):
+                    tailcigar = str(int(alignment[-1][3]))+'M'+tailcigar
+                cigarstring = ''.join(cigarlist[iloc])
+                onemapinfolist.append((readid, contig, '-', query_st, query_en, target_st-refbias, target_en-refbias, mapq, topcigar+cigarstring+tailcigar))
+            else:
+                query_st = testseq_len-alignment[0][0]-alignment[0][3]
+                query_en = testseq_len-alignment[-1][0]
+                target_st = alignment[0][1]
+                target_en = alignment[-1][1] + alignment[-1][3]
+
+                cigarstring = ''.join(cigarlist[iloc])
+                if(query_st > 0):
+                    topcigar = str(query_st) + clipsyb
+                else:
+                    topcigar = ''
+                if((testseq_len - query_en) > 0):
+                    tailcigar = str(testseq_len - query_en) + clipsyb
+                else:
+                    tailcigar = ''
+                onemapinfolist.append((readid, contig, '+', query_st, query_en, target_st-refbias, target_en-refbias, mapq, topcigar+cigarstring+tailcigar))
+
+        for line in onemapinfolist:
+            if(testseq_len != len(Cigar(line[-1]))):
+                logging.error('testseq_len != Cigar(line[-1])')
+                raise Exception('testseq_len != Cigar(line[-1])')
+        return new_alignment_list, onemapinfolist[::-1]
+
+@njit
+def return_main_alignment_size(contig2start, raw_alignment_list):
+
+    preitem = raw_alignment_list[0]
+    return_pack = (preitem, preitem)
+    size = 0
+     
+    st_item = preitem
+    for nowitem in raw_alignment_list[1:]:
+        if(preitem[2] == nowitem[2]):
+            readgap = nowitem[0] - preitem[0] - preitem[3]
+            if(readgap < 0):
+                continue
+
+
+            if(preitem[2] == 1):
+                refgap = nowitem[1] - preitem[1] - preitem[3]
+            else:
+                refgap = preitem[1]  - nowitem[1] - nowitem[3]
+
+            if((abs(readgap - refgap) <= 30) and (refgap >= 0)):
+                if(pos2contig(preitem[1], contig2start) == pos2contig(nowitem[1], contig2start)):
+                    preitem = nowitem
+                    continue
+
+        if(preitem[0] - st_item[0] > size):
+            size = preitem[0] - st_item[0]
+            return_pack = (st_item, preitem)
+        preitem = nowitem
+        
+        st_item = preitem
+    if(preitem[0] - st_item[0] > size):
+        size = preitem[0] - st_item[0]
+        return_pack = (st_item, preitem)
+
+    return return_pack 
+def decode_hit(index_object, index2contig, testseq, testseq_len, contig2start, kmersize, contig2seq, skipcost = (50., 30.), maxdiff = (50, 30), maxgap = 200, check_num = 20, c_bias = 5000, bin_size = 100, overlapprecentage = 0.5, hastra = True, H = False, mid_occ = -1):            
+    #redo_ratio = 5#hifi
+    redo_ratio = 10#clr, ont
+    st = time.time()
+    need_reverse, one_mapinfo = get_reversed_chain_numpy_rough(np.array(index_object.map(testseq, check_num = check_num,mid_occ = mid_occ)), testseq_len)
+    if(len(one_mapinfo) <= 2):
+        return 0, 0., [(0, 0, 0, 0)], -1
+    #print_log(need_reverse)
+    #print_log('index_object.map', time.time() - st)
+    maxgap = 1000
+    #print_log('len(one_mapinfo)', len(one_mapinfo))
+    st = time.time()
+    if(len(one_mapinfo) < 2147483638):
+        path_list, primary_index_List, primary_scores_List, all_index_List, mapq, scores_list, factor =  hit2work_1(one_mapinfo, index2contig, contig2start, testseq_len, skipcost, maxdiff, maxgap, check_num, c_bias, bin_size, kmersize, overlapprecentage, hastra, H = H)
+    else:
+        path_list, primary_index_List, primary_scores_List, all_index_List, mapq, scores_list, factor =  hit2work_1_64(one_mapinfo, index2contig, contig2start, testseq_len, skipcost, maxdiff, maxgap, check_num, c_bias, bin_size, kmersize, overlapprecentage, hastra, H = H)
+    if(len(path_list) == 0):
+        scores, path = 0., [(0, 0, 0, 0)]
+        return 0, scores, path, factor
+    #print_log(scores_list)
+    #print_log('hit2work_1', time.time() - st)
+    #print_log('mapq', mapq)
+    st = time.time()
+    if(len(primary_index_List) != 0):
+        base_iloc = primary_index_List[0]
+        
+        if(mapq == 0):
+            #print_log('len(primary_scores_List)', len(primary_scores_List))
+            base_score = primary_scores_List[0][0]
+            rc_testseq = str(Seq(testseq).reverse_complement())
+            min_diff = 10
+            for tmpiloc in range(len(primary_scores_List[0])):
+                if(primary_scores_List[0][tmpiloc] / base_score < 0.999):
+                    break
+                #print_log(all_index_List[0][tmpiloc])
+                #print_log(primary_scores_List[0][tmpiloc])
+                #print_log(path_list[all_index_List[0][tmpiloc]][-1], ',', path_list[all_index_List[0][tmpiloc]][0])
+                #preitem, nowitem = path_list[all_index_List[0][tmpiloc]][-1], path_list[all_index_List[0][tmpiloc]][0]
+                preitem, nowitem = return_main_alignment_size(contig2start, np.array(path_list[all_index_List[0][tmpiloc]][::-1]))
+                #print_log(preitem, nowitem)
+                if((preitem[2] != nowitem[2]) or (preitem[0] == nowitem[0])):
+                    continue
+                if(need_reverse == False):
+                    target, query, target_st, target_en, query_st, query_en = get_query_target_for_cigar(preitem, nowitem, testseq, rc_testseq, testseq_len, kmersize, contig2seq, contig2start)
+                else:
+                    target, query, target_st, target_en, query_st, query_en = get_query_target_for_cigar(preitem, nowitem, rc_testseq, testseq, testseq_len, kmersize, contig2seq, contig2start)
+                if(min(len(target), len(query)) == 0):
+                    print_log(preitem, nowitem)
+                    print_log(testseq)
+                diff = edlib.align(query = query, target = target, task = 'distance')['editDistance']/min(len(target), len(query))
+                #print_log(diff)
+                if(diff <= min_diff):
+                    min_diff = diff
+                    #print_log('change', base_iloc, '->', all_index_List[0][tmpiloc])
+                    base_iloc = all_index_List[0][tmpiloc]
+                    primary_index_List[0] = base_iloc
+ 
+                    
+                #print_log()
+        
+        scores, path = scores_list[base_iloc], path_list[base_iloc]
+    else:
+        scores, path = 0., [(0, 0, 0, 0)]
+    #print_log('edlib', time.time() - st)
+    if(need_reverse == True):
+        return mapq, -scores, path, factor
+    else:
+        return mapq, scores, path, factor

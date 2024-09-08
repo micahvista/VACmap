@@ -1,8 +1,6 @@
 '''   
  * @Title: VACmap 
  * @author: Ding Hongyu
- * @date: 12 6 2023
- * @version V1.0.1
 '''
 import sys
 import os
@@ -241,7 +239,7 @@ else:
     pdict['debug'] = True
 logging.info('Debug: ' + str(pdict['debug']) + ' [--debug]')
 
-logging.info('Build 09042024')
+logging.info('Build 09082024')
 
 
 if(hit == True):
@@ -333,7 +331,7 @@ else:
             header['RG'] = [rg_dict]
         else:
             logging.info('No RG tag.')
-        header['PG'] = [{'ID': 'VACmap', 'PN': 'VACmap', 'VN': '1.0.09042024', 'CL': command}] 
+        header['PG'] = [{'ID': 'VACmap', 'PN': 'VACmap', 'VN': '1.0.09082024', 'CL': command}] 
 
 
         rc_testseq = str(Seq(testseq).reverse_complement())
