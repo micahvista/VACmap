@@ -24,6 +24,11 @@ Usage
     -read The path of long reads. 
     -t The number of threads to use. 
     
+    Input:
+        Supported read input types: FASTA, FASTA.GZ, FASTQ, FASTQ.GZ, BAM.
+        Multiple read input options:
+            -read read_1.fa read_2.fa ...
+            -read read_1.fa -read read_2.fa ...
 
     Mapping:
         -mode H For aligning high error rate long read (Pacbio CLR, ONT). 
