@@ -26,6 +26,7 @@ Usage
     
     Input:
         Supported read input types: FASTA, FASTA.GZ, FASTQ, FASTQ.GZ, BAM.
+            [Warning: Duplicate reads (based on read names) will be processed only once.]
         Multiple read input options:
             -read read_1.fa read_2.fa ...
             -read read_1.fa -read read_2.fa ...
