@@ -29,7 +29,7 @@ Usage
         -mode H For aligning high error rate long read (Pacbio CLR, ONT). 
         -mode L For aligning low error rate long read (Pacbio HiFi). 
         -mode S Increase the sensitivity for small variants. (<100bp). (Pacbio CLR, ONT, HiFi). 
-        -mode R Use a fixed value for the variation penalty. (Pacbio CLR, ONT, HiFi). 
+        -mode R Use a fixed value for the variation penalty that is more sensitive to translocation events, such as gene conversion. (Pacbio CLR, ONT, HiFi). 
         
         -k k-mer size (no larger than 28, deflaut: 15) # set -k 19 -w 10 for HiFi data 
             to reduce run time (2X faster) but there is very small decrease in accuracy.
