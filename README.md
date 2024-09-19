@@ -104,7 +104,7 @@ This is a demonstration of the non-linear alignment algorithm used in VACmap: ht
 Citation
 ---------
 
-https://www.biorxiv.org/content/10.1101/2023.08.03.551566v2
+[https://www.biorxiv.org/content/10.1101/2023.08.03.551566v2](https://www.biorxiv.org/content/10.1101/2023.08.03.551566v3)
 
 License
 -------
