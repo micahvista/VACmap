@@ -21334,3 +21334,48 @@ def decode_hit(index_object, index2contig, testseq, testseq_len, contig2start, k
         return mapq, -scores, path, factor
     else:
         return mapq, scores, path, factor
+#09212024
+def P_alignmentstring_comments(infodict, comments):
+                #  0     1     2     3     4     5     6      7      8     9     10
+                #QNAME FLAG  RNAME  POS  MAPQ  CIGAR RNEXT  PNEXT  TLEN   SEQ   QUAL
+    infolist = ['*',   '4',   '*',  '0', '255', '*',  '*',   '0',  '0',   '*',   '*']
+    name2iloc = {
+        'QNAME': 0,
+        'FLAG': 1,
+        'RNAME': 2,
+        'POS': 3,
+        'MAPQ': 4,
+        'CIGAR': 5,
+        'RNEXT': 6,
+        'PNEXT': 7,
+        'TLEN': 8,
+        'SEQ': 9,
+        'QUAL': 10
+    }
+    def p_other_tag(tag, value):
+        if(type(value) == int):
+            code = 'i'
+        elif(type(value) == float):
+            code = 'f'
+        elif(type(value) == str):
+            code = 'Z'
+        else:
+            code = 'Z'
+        return tag+':'+code+':'+str(value)
+    def checkcomment(comments, infolist, tags):
+        if(isinstance(comments, str)):
+            comments_info = comments.split('\t')
+            for onecomment in comments_info:
+                info = onecomment.split(':')
+                if((len(info) == 3) and (len(info[0]) == 2) and (info[0] not in tags) and (info[1] in ('A', 'i', 'f', 'Z', 'H', 'B'))):
+                    infolist.append(onecomment)
+                    tags.add(info[0])
+    tags = set(('QNAME','FLAG','RNAME','POS','MAPQ','CIGAR','RNEXT','PNEXT','TLEN','SEQ','QUAL', 'SA','NM','MD','cs'))
+    for key in infodict:
+        if(key in name2iloc):
+            infolist[name2iloc[key]] = infodict[key]
+        else:
+            infolist.append(p_other_tag(key, infodict[key]))
+            tags.add(key)
+    checkcomment(comments, infolist, tags)
+    return '\t'.join(infolist)
