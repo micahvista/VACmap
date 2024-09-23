@@ -21379,3 +21379,112 @@ def P_alignmentstring_comments(infodict, comments):
             tags.add(key)
     checkcomment(comments, infolist, tags)
     return '\t'.join(infolist)
+#09232024
+def get_onemapinfolist(new_alignment_list, cigarlist, readid, mapq, testseq_len, contig2start, need_reverse, use_hardclip):
+    if(use_hardclip == True):
+        clipsyb = 'H'
+    else:
+        clipsyb = 'S'
+    onemapinfolist = []
+    iloc = -1
+    if(need_reverse == False):
+        for alignment in new_alignment_list:
+            contig = pos2contig(alignment[0][1], contig2start)
+            iloc += 1
+            refbias = contig2start[contig]
+            if(alignment[0][2] == 1):
+                query_st = alignment[0][0]
+                query_en = alignment[-1][0] + alignment[-1][3]
+                target_st = alignment[0][1]
+                target_en = alignment[-1][1] + alignment[-1][3]
+                if(query_st > 0):
+                    topcigar = str(query_st) + clipsyb
+                else:
+
+                    topcigar = ''
+                if((testseq_len - query_en) > 0):
+                    tailcigar = str(testseq_len - query_en) + clipsyb
+                else:
+                    tailcigar = ''
+                if(alignment[-1][3] > 0):
+                    tailcigar = str(int(alignment[-1][3]))+'M'+tailcigar
+                cigarstring = ''.join(cigarlist[iloc])
+                onemapinfolist.append((readid, contig, '+', query_st, query_en, target_st-refbias, target_en-refbias, mapq, topcigar+cigarstring+tailcigar))
+            else:
+                query_st = testseq_len-alignment[0][0]-alignment[0][3]
+                query_en = testseq_len-alignment[-1][0]
+                target_st = alignment[0][1]
+                target_en = alignment[-1][1] + alignment[-1][3]
+
+                cigarstring = ''.join(cigarlist[iloc])
+                if(query_st > 0):
+                    topcigar = str(query_st) + clipsyb
+                else:
+                    topcigar = ''
+                if((testseq_len - query_en) > 0):
+                    tailcigar = str(testseq_len - query_en) + clipsyb
+                else:
+                    tailcigar = ''
+                onemapinfolist.append((readid, contig, '-', query_st, query_en, target_st-refbias, target_en-refbias, mapq, topcigar+cigarstring+tailcigar))
+        if(use_hardclip == False):
+            for line in onemapinfolist:
+                if(testseq_len != len(Cigar(line[-1]))):
+                    logging.error('testseq_len != Cigar(line[-1])')
+                    raise Exception('testseq_len != Cigar(line[-1])')
+        else:
+            for line in onemapinfolist:
+                if((line[4] - line[3]) != len(Cigar(line[-1]))):
+                    logging.error('(line[4] - line[3]) != Cigar(line[-1])')
+                    raise Exception('(line[4] - line[3]) != Cigar(line[-1])')
+        return new_alignment_list, onemapinfolist
+    else:
+        for alignment in new_alignment_list:
+            contig = pos2contig(alignment[0][1], contig2start)
+            iloc += 1
+            refbias = contig2start[contig]
+            if(alignment[0][2] == 1):
+                query_st = alignment[0][0]
+                query_en = alignment[-1][0] + alignment[-1][3]
+                target_st = alignment[0][1]
+                target_en = alignment[-1][1] + alignment[-1][3]
+                if(query_st > 0):
+                    topcigar = str(query_st) + clipsyb
+                else:
+
+                    topcigar = ''
+                if((testseq_len - query_en) > 0):
+                    tailcigar = str(testseq_len - query_en) + clipsyb
+                else:
+                    tailcigar = ''
+                if(alignment[-1][3] > 0):
+                    tailcigar = str(int(alignment[-1][3]))+'M'+tailcigar
+                cigarstring = ''.join(cigarlist[iloc])
+                onemapinfolist.append((readid, contig, '-', query_st, query_en, target_st-refbias, target_en-refbias, mapq, topcigar+cigarstring+tailcigar))
+            else:
+                query_st = testseq_len-alignment[0][0]-alignment[0][3]
+                query_en = testseq_len-alignment[-1][0]
+                target_st = alignment[0][1]
+                target_en = alignment[-1][1] + alignment[-1][3]
+
+                cigarstring = ''.join(cigarlist[iloc])
+                if(query_st > 0):
+                    topcigar = str(query_st) + clipsyb
+                else:
+                    topcigar = ''
+                if((testseq_len - query_en) > 0):
+                    tailcigar = str(testseq_len - query_en) + clipsyb
+                else:
+                    tailcigar = ''
+                onemapinfolist.append((readid, contig, '+', query_st, query_en, target_st-refbias, target_en-refbias, mapq, topcigar+cigarstring+tailcigar))
+
+        if(use_hardclip == False):
+            for line in onemapinfolist:
+                if(testseq_len != len(Cigar(line[-1]))):
+                    logging.error('testseq_len != Cigar(line[-1])')
+                    raise Exception('testseq_len != Cigar(line[-1])')
+        else:
+            for line in onemapinfolist:
+                if((line[4] - line[3]) != len(Cigar(line[-1]))):
+                    logging.error('(line[4] - line[3]) != Cigar(line[-1])')
+                    raise Exception('(line[4] - line[3]) != Cigar(line[-1])')
+        return new_alignment_list, onemapinfolist[::-1]
