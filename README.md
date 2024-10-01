@@ -25,12 +25,12 @@ Usage
     Map assembly:
     ---------------------- 
 
-    vacmap -ref /ref.fasta -read /read.fasta -mode ams -t 8  -workdir /home/usr/workdir/ --H --fakecigar | samtools sort -@4 > alignments.sorted.bam
+    vacmap -ref /ref.fasta -read /read.fasta -mode asm -t 8  -workdir /home/usr/workdir/ --H --fakecigar | samtools sort -@4 > alignments.sorted.bam
     samtools index -@4 alignments.sorted.bam
     
     or (lower memory usage)
     
-    vacmap -ref /ref.fasta -read /read.fasta -mode ams -t 8  -workdir /home/usr/workdir/ --H --fakecigar > alignments.sam
+    vacmap -ref /ref.fasta -read /read.fasta -mode asm -t 8  -workdir /home/usr/workdir/ --H --fakecigar > alignments.sam
     samtools sort -@4 alignments.sam > alignments.sorted.bam
     samtools index -@4 alignments.sorted.bam
     
