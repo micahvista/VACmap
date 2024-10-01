@@ -34,13 +34,18 @@ Usage
     samtools sort -@4 alignments.sam > alignments.sorted.bam
     samtools index -@4 alignments.sorted.bam
     
-    -ref The path of reference sequence. 
-    -read The path of long reads. 
-    -t The number of threads to use. (Note: In asm mode, using fewer threads results in lower memory usage.)
-    -workdir For asm mode, store temporary data. If the folder not existexist, VACmap will create it automatically. 
+     
 
 Parameter
 ----------------------  
+    Mandatory parameter:
+    
+        -ref The path of reference sequence. 
+        -read The path of long reads. 
+        -t The number of threads to use. (Note: In asm mode, using fewer threads results in lower memory usage.)
+        -mode S|L|H|R|asm
+        -workdir Only for asm mode, store temporary data. If the folder not existexist, VACmap will create it automatically.
+
     Input:
         Supported read input types: FASTA, FASTA.GZ, FASTQ, FASTQ.GZ, BAM.
             [Warning: Duplicate reads (based on read names) will be processed only once.]
