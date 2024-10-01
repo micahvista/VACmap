@@ -14,16 +14,29 @@ Installation
     python setup.py install
 
 Usage
-----------------------    
+----------------------  
+
+    Map long genomic reads:
     
-    conda activate vacmap_env
-    vacmap -ref /ref.fasta -read /read.fasta -mode S -t number_of_threads | samtools sort -@4 > alignments.sorted.bam
+    vacmap -ref /ref.fasta -read /read.fasta -mode S -t 8 | samtools sort -@4 > alignments.sorted.bam
+    samtools index -@4 alignments.sorted.bam
+
+    Map assembly:
+
+    vacmap -ref /ref.fasta -read /read.fasta -mode ams -t 8  -workdir /home/usr/workdir/ --H --fakecigar | samtools sort -@4 > alignments.sorted.bam
+    samtools index -@4 alignments.sorted.bam
+    
+    or (lower memory usage)
+    
+    vacmap -ref /ref.fasta -read /read.fasta -mode ams -t 8  -workdir /home/usr/workdir/ --H --fakecigar > alignments.sam
+    samtools sort -@4 alignments.sam > alignments.sorted.bam
     samtools index -@4 alignments.sorted.bam
     
     -ref The path of reference sequence. 
     -read The path of long reads. 
     -t The number of threads to use. 
-    
+    -workdir For asm mode, store temporary data. If the folder not existexist, VACmap will create it automatically. 
+     
     Input:
         Supported read input types: FASTA, FASTA.GZ, FASTQ, FASTQ.GZ, BAM.
             [Warning: Duplicate reads (based on read names) will be processed only once.]
@@ -37,6 +50,7 @@ Usage
         -mode S Increase the sensitivity for small variants. (<100bp). (Pacbio CLR, ONT, HiFi). 
         -mode R Use a fixed value for the variation penalty, more sensitive to translocation events, 
             such as gene conversion. (Pacbio CLR, ONT, HiFi). 
+        -mode asm For full genome alignment. Using the same parameter with mode S with option --eqx selected.  
         
         -k k-mer size (no larger than 28, deflaut: 15) # set -k 19 -w 10 for HiFi data 
             to reduce run time (2X faster) but there is very small decrease in accuracy.
@@ -57,6 +71,8 @@ Usage
             [Warning: SV callers may fail to detect split-read events.]
 
         --Q Ignore base quality in the input file.
+
+        --fakecigar Use approximate CIAGR in the SA tag.
     
         --rg-id <string> Adds RG:Z:<string> to all alignments
         --rg-sm <string> RG header: Sample 
