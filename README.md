@@ -21,7 +21,9 @@ Usage
     
     vacmap -ref /ref.fasta -read /read.fasta -mode S -t 8 | samtools sort -@4 > alignments.sorted.bam
     samtools index -@4 alignments.sorted.bam
-
+    
+    *Memory usage: <20GB
+    
     Map assembly:
     ---------------------- 
 
@@ -34,7 +36,7 @@ Usage
     samtools sort -@4 alignments.sam > alignments.sorted.bam
     samtools index -@4 alignments.sorted.bam
     
-     
+    *Memory usage: 30GB-70GB Using more threads requires more memory.
 
 Parameter
 ----------------------  
