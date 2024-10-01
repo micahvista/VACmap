@@ -36,7 +36,9 @@ Usage
     -read The path of long reads. 
     -t The number of threads to use. 
     -workdir For asm mode, store temporary data. If the folder not existexist, VACmap will create it automatically. 
-     
+
+Parameter
+----------------------  
     Input:
         Supported read input types: FASTA, FASTA.GZ, FASTQ, FASTQ.GZ, BAM.
             [Warning: Duplicate reads (based on read names) will be processed only once.]
