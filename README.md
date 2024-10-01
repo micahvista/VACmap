@@ -16,12 +16,12 @@ Installation
 Usage
 ----------------------  
 
-    Map long genomic reads:
+    #Map long genomic reads:
     
     vacmap -ref /ref.fasta -read /read.fasta -mode S -t 8 | samtools sort -@4 > alignments.sorted.bam
     samtools index -@4 alignments.sorted.bam
 
-    Map assembly:
+    #Map assembly:
 
     vacmap -ref /ref.fasta -read /read.fasta -mode ams -t 8  -workdir /home/usr/workdir/ --H --fakecigar | samtools sort -@4 > alignments.sorted.bam
     samtools index -@4 alignments.sorted.bam
@@ -34,7 +34,7 @@ Usage
     
     -ref The path of reference sequence. 
     -read The path of long reads. 
-    -t The number of threads to use. 
+    -t The number of threads to use. (Note: In asm mode, using fewer threads results in lower memory usage.)
     -workdir For asm mode, store temporary data. If the folder not existexist, VACmap will create it automatically. 
 
 Parameter
