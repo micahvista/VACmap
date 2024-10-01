@@ -50,7 +50,7 @@ for item in pstring[1:]:
     command += ' ' + item
     if('-' != item[:1]):
         forvaule = False
-        if(op == 'outputdir'):
+        if('dir' in op):
             if(item[-1] != '/'):
                 pdict[op] = (item+'/') 
             else:
@@ -129,30 +129,44 @@ else:
     prefix = pdict['outputdir']
     if(os.path.isdir(pdict['outputdir']) == False):
         os.mkdir(pdict['outputdir'])
-
+output_in_stdout = True
 if('mode' not in pdict):
     logging.error('mode is required.')
     hit = True
 else:
-    if(pdict['mode'] not in ('H', 'L', 'S', 'R')):
+    if(pdict['mode'] not in ('H', 'L', 'S', 'R', 'asm')):
         logging.error('Invaild mode '+ pdict['mode'])
+        raise Exception("ERROR: "+'Invaild mode '+ pdict['mode'])
         hit = True
     else:
         logging.info('Mode: ' + pdict['mode'])
+if(pdict['mode'] == 'asm'):
+    pdict['eqx'] = True
+
+    if('workdir' not in pdict):
+        hit = True
+        logging.error('\n\nworkdir not provide! -workdir /path/to/workdir\n\n' )
+        raise Exception("ERROR: "+'workdir not provide! -workdir /path/to/workdir')
+    else:
+        if(os.path.isdir(pdict['workdir']) == False):
+            logging.info("workdir " + pdict['workdir'] + " does not exist; creating it automatically")
+            os.mkdir(pdict['workdir'])
+pdict['local_skipcost'] = 30.
+pdict['golbal_skipcost'] = 30.
+pdict['local_kmersize'] = 9
 if(pdict['mode'] == 'L'):
     pdict['local_skipcost'] = 40.
     pdict['golbal_skipcost'] = 40.
 elif(pdict['mode'] == 'H'):
     pdict['local_skipcost'] = 40.
     pdict['golbal_skipcost'] = 40.
-else:
-    pdict['local_skipcost'] = 30.
-    pdict['golbal_skipcost'] = 30.
+
       
 if('maxdivergence' not in pdict):
     pdict['maxdivergence'] = 0.5
 else:
     pdict['maxdivergence'] = float(pdict['maxdivergence'])
+
 logging.info('Max sequence divergence: ' + str(pdict['maxdivergence']) + ' [-maxdivergence ' + str(pdict['maxdivergence'])+']')    
 if('t' not in pdict):
     pdict['t'] = 8
@@ -219,7 +233,13 @@ if('H' not in pdict):
     pdict['H'] = False
 else:
     pdict['H'] = True
-logging.info('Use hard-clipping instead of soft-cliping for cliped sequences: ' + str(pdict['H']) + ' [--H]')
+logging.info('Use hard-clipping instead of soft-clipping for clipped sequences: ' + str(pdict['H']) + ' [--H]')
+
+if('fakecigar' not in pdict):
+    pdict['fakecigar'] = False
+else:
+    pdict['fakecigar'] = True
+logging.info('Use approximate CIAGR in the SA tag: ' + str(pdict['fakecigar']) + ' [--fakecigar]')
 
 if('Q' not in pdict):
     pdict['Q'] = False
@@ -239,12 +259,12 @@ else:
     pdict['debug'] = True
 logging.info('Debug: ' + str(pdict['debug']) + ' [--debug]')
 
-logging.info('Build 09232024')
+logging.info('Build 09292024')
 
 
 if(hit == True):
     print('Usage')
-    print('vacmap -ref /ref.fasta -read /read.fasta -mode H|L -t 8 [--eqx] [--MD] [--cs] [--L]')
+    print('vacmap -ref /ref.fasta -read /read.fasta -mode H|L -t 8 [--eqx] [--MD] [--cs] ')
     print('\t-mode H ')
     print('\t\tFor aligning high error rate long read.(Pacbio CLR, ONT)')
     print('\t-mode L')
@@ -270,6 +290,8 @@ else:
         import vacmap.mammap_sensitive as mammap
     elif(pdict['mode'] == 'R'):
         import vacmap.mammap_noprefercloser as mammap
+    elif(pdict['mode'] == 'asm'):
+        import vacmap.mammap_asm as mammap
         
                     
     refpath = pdict['ref']
@@ -351,18 +373,29 @@ else:
         n = max_worker
         if(output_in_stdout == True):
             logging.info('Output in stdout')
-            raw_queue, cooked_queue = multiprocessing.Manager().Queue(maxsize=max_worker*200), multiprocessing.Manager().Queue(maxsize=max_worker*200)
-            write_process = multiprocessing.Process(target=mammap.stdout_writer, args=(cooked_queue, header))
-            write_process.start()
+            if(pdict['mode'] == 'asm'):
+                raw_queue, cooked_queue = multiprocessing.Manager().Queue(maxsize=1), multiprocessing.Manager().Queue(maxsize=1)
+                write_process = multiprocessing.Process(target=mammap.assembly_stdout_writer, args=(cooked_queue, header))
+                write_process.start()
+            else:
+                raw_queue, cooked_queue = multiprocessing.Manager().Queue(maxsize=max_worker*200), multiprocessing.Manager().Queue(maxsize=max_worker*200)
+                write_process = multiprocessing.Process(target=mammap.stdout_writer, args=(cooked_queue, header))
+                write_process.start()
         else:
             raw_queue = multiprocessing.Manager().Queue(maxsize=max_worker*200)
         process_list = []
         for count in range(1, n+1):
             if(output_in_stdout == True):
-                if(pdict['copycomments'] == False):
-                    one_process = multiprocessing.Process(target=mammap.get_list_of_readmap_stdout, args=(raw_queue, cooked_queue, index_object, contig2seq, True, H, header, pdict))
+                if(pdict['mode'] == 'asm'):
+                    if(pdict['copycomments'] == False):
+                        one_process = multiprocessing.Process(target=mammap.assembly_get_list_of_readmap_stdout, args=(raw_queue, cooked_queue, index_object, contig2seq, True, H, header, pdict))
+                    else:
+                        one_process = multiprocessing.Process(target=mammap.assembly_get_list_of_readmap_stdout_comments, args=(raw_queue, cooked_queue, index_object, contig2seq, True, H, header, pdict))
                 else:
-                    one_process = multiprocessing.Process(target=mammap.get_list_of_readmap_stdout_comments, args=(raw_queue, cooked_queue, index_object, contig2seq, True, H, header, pdict))
+                    if(pdict['copycomments'] == False):
+                        one_process = multiprocessing.Process(target=mammap.get_list_of_readmap_stdout, args=(raw_queue, cooked_queue, index_object, contig2seq, True, H, header, pdict))
+                    else:
+                        one_process = multiprocessing.Process(target=mammap.get_list_of_readmap_stdout_comments, args=(raw_queue, cooked_queue, index_object, contig2seq, True, H, header, pdict))
                 one_process.start()
                 process_list.append(one_process)
             else:
@@ -453,6 +486,7 @@ else:
                             count += 1
 
                             raw_queue.put((name, seq, None))
+                            #raw_queue.put((name, seq[:10000000], None))
                             #if(count > 10):
                                 #break
                             if(count % 100000 == 0):
@@ -523,22 +557,16 @@ else:
                                 tmp_st = c_time
                                 tmp_count = count
                     
-                
-
-
-
-
-        c_time = time.time()
-
-        tmptime = c_time - tmp_st
-        t_time = c_time - st
-
-
-        
+                        
         for i in range(n):
             raw_queue.put(i)
         for one_process in process_list:
             one_process.join()
+            
+        c_time = time.time()
+        tmptime = c_time - tmp_st
+        t_time = c_time - st
+        
         if(output_in_stdout == False):
             logging.info('User time (h:m:s): {}:{}:{} '.format(int(t_time//3600), int(t_time%3600//60), int(t_time%60)) + str(round(count / t_time)) + ' / sec AVG. ' + str(count) + ' sequences processed.')
         else:

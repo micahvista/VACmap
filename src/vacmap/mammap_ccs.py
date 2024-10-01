@@ -21489,3 +21489,397 @@ def get_onemapinfolist(new_alignment_list, cigarlist, readid, mapq, testseq_len,
                     logging.error('(line[4] - line[3]) != Cigar(line[-1])')
                     raise Exception('(line[4] - line[3]) != Cigar(line[-1])')
         return new_alignment_list, onemapinfolist[::-1]
+#20240930
+def get_bam_dict_str(mapinfo, query, qual, contig2iloc, contig2seq, md, shortcs, cigar2cg, markunbalancetra, option):
+    #'hhk',         ,  '1', '+', 11, 9192, 2767041, 2776138, 60
+    #      0            1    2   3    4      5         6      7
+    #'18_19897150_+', '18', '+', 0, 4776, 19832244, 19837393, 1]
+    if(markunbalancetra == True):
+        mapinfo = reassign_mapq(mapinfo)
+    else:
+        for iloc in range(len(mapinfo)):
+            mapinfo[iloc] = list(mapinfo[iloc])
+
+    
+    hardclip = option['H']
+    
+    rc_query = str(Seq(query).reverse_complement())
+    #mapinfo.sort(key = sort_by_length)
+    #mapinfo = mapinfo[::-1]
+    mapinfo.sort(key = sortbycontig)
+    iloc2nm = dict()
+    iloc2md = dict()
+    iloc2cs = dict()
+    iloc2n_cigar = dict()
+    tmpiloc = -1
+    fakecigar = option['fakecigar']
+    if(fakecigar == True):
+        iloc2fakecigar = dict()
+        if(hardclip == True):
+            clipsyb = 'H'
+        else:
+            clipsyb = 'S'
+    if(md == False):
+        for item in mapinfo:
+            item[-1], n_cigar = mergecigar_n(item[-1])
+            tmpiloc += 1
+            if(item[2] == '+'):
+                nm = compute_NM_tag(query[item[3]: item[4]], get_refseq(item[1], item[5], item[6], contig2seq))
+            else:
+                nm = compute_NM_tag(rc_query[item[3]: item[4]], get_refseq(item[1], item[5], item[6], contig2seq))
+            iloc2nm[tmpiloc] = nm
+            iloc2n_cigar[tmpiloc] = n_cigar
+            if(fakecigar == True):
+                if(item[3] > 0):
+                    onefaketop = str(item[3]) + clipsyb
+                else:
+                    onefaketop = ''
+                if((len(query) - item[4]) > 0):
+                    onefaketail = str(len(query) - item[4]) + clipsyb
+                else:
+                    onefaketail = ''
+                tmpdiff = item[4] - item[3] - item[6] + item[5]
+                if(tmpdiff > 0):
+                    onefakebody = str(item[6] - item[5]) + 'M' + str(tmpdiff) + 'I'
+                elif(tmpdiff < 0):
+                    onefakebody = str(item[4] - item[3]) + 'M' + str(abs(tmpdiff)) + 'D'
+                else:
+                    onefakebody = str(item[4] - item[3]) + 'M'
+                iloc2fakecigar[tmpiloc] =  ''.join((onefaketop, onefakebody, onefaketail))
+    else:
+        for item in mapinfo:
+            tmpiloc += 1
+            if(item[2] == '+'):
+                tmp_query = query[item[3]: item[4]]
+                tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
+            else:
+                tmp_query = rc_query[item[3]: item[4]]
+                tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
+            cigarstring, mdstring, csstring, n_cigar = mergecigar_md_cs(item[-1], tmp_target, tmp_query, shortcs)
+            nm = compute_NM_tag(tmp_query, tmp_target)
+            item[-1] = cigarstring
+            iloc2nm[tmpiloc] = nm
+            iloc2md[tmpiloc] = mdstring
+            iloc2cs[tmpiloc] = csstring
+            iloc2n_cigar[tmpiloc] = n_cigar
+            if(fakecigar == True):
+                if(item[3] > 0):
+                    onefaketop = str(item[3]) + clipsyb
+                else:
+                    onefaketop = ''
+                if((len(query) - item[4]) > 0):
+                    onefaketail = str(len(query) - item[4]) + clipsyb
+                else:
+                    onefaketail = ''
+                tmpdiff = item[4] - item[3] - item[6] + item[5]
+                if(tmpdiff > 0):
+                    onefakebody = str(item[6] - item[5]) + 'M' + str(tmpdiff) + 'I'
+                elif(tmpdiff < 0):
+                    onefakebody = str(item[4] - item[3]) + 'M' + str(abs(tmpdiff)) + 'D'
+                else:
+                    onefakebody = str(item[4] - item[3]) + 'M'
+                iloc2fakecigar[tmpiloc] =  ''.join((onefaketop, onefakebody, onefaketail))
+
+    if((qual != None) and (len(qual) == len(query))):
+        query_qualities = qual
+        rc_query_qualities = query_qualities[::-1]
+    a_list = []
+    primary_iloc = 0
+    if(len(mapinfo) > 1):
+        if(mapinfo[0][7] == 1 and mapinfo[1][7] != 1):
+            primary_iloc = 1
+
+    #QNAME FLAG  RNAME  POS  MAPQ  CIGAR RNEXT  PNEXT  TLEN   SEQ   QUAL
+    for iloc in range(len(mapinfo)):
+        
+        bam_dict = dict()
+        if('rg-id' in option):
+            bam_dict['RG'] = option['rg-id']
+        primary = mapinfo[iloc]
+        bam_dict['QNAME'] = primary[0]
+        bam_dict['RNAME'] = primary[1]
+        if(iloc == primary_iloc):
+            base_value = 0
+        else:
+            base_value = 2048
+        if(primary[2] == '+'):
+            bam_dict['FLAG'] = str(base_value)
+
+        else:
+            bam_dict['FLAG'] = str(16 + base_value)
+
+
+        bam_dict['POS'] = str(primary[5] + 1)# SAM Format
+
+        if(iloc2n_cigar[iloc] > 65535):
+            if(cigar2cg == True):
+                bam_dict['CG'] = primary[8]
+                logging.info('Write long CIGAR to CG tag.')
+            else:
+                bam_dict['CIGAR'] = primary[8]
+        else:
+            bam_dict['CIGAR'] = primary[8]
+
+        if(len(mapinfo) > 1):
+            salist = []
+            tmpiloc = -1
+            for item in mapinfo:
+                tmpiloc += 1
+                if(tmpiloc == iloc):
+                    continue
+                mq = mapinfo[tmpiloc][7]
+                if(mq != 0):
+                    mq = 60
+                else:
+                    mq = 1
+                nm = iloc2nm[tmpiloc]
+                if(fakecigar == False):
+                    salist.append(''.join((item[1], ',', str(item[5]+1), ',', item[2], ',', item[8], ',', str(mq), ',', str(nm)+';')))
+                else:
+                    salist.append(''.join((item[1], ',', str(item[5]+1), ',', item[2], ',', iloc2fakecigar[tmpiloc], ',', str(mq), ',', str(nm)+';')))
+
+
+            bam_dict['SA'] = ''.join(salist)
+        mq = mapinfo[iloc][7]
+        if(mq != 0):
+            mq = 60
+        else:
+            mq = 1
+        item = primary
+
+        bam_dict['MAPQ'] = str(mq)
+
+        if(item[2] == '+'):
+            if(hardclip == False):
+                bam_dict['SEQ'] = query
+                if((qual != None) and (len(qual) == len(query))):
+                    bam_dict['QUAL'] = query_qualities
+            else:
+                bam_dict['SEQ'] = query[item[3]: item[4]]
+                if((qual != None) and (len(qual) == len(query))):
+                    bam_dict['QUAL'] = query_qualities[item[3]: item[4]]
+                
+
+            
+        else:
+            if(hardclip == False):
+                bam_dict['SEQ'] = rc_query
+                if((qual != None) and (len(qual) == len(query))):
+                    bam_dict['QUAL'] = rc_query_qualities
+            else:
+                bam_dict['SEQ'] = rc_query[item[3]: item[4]]
+                if((qual != None) and (len(qual) == len(query))):
+                    bam_dict['QUAL'] = rc_query_qualities[item[3]: item[4]]
+
+            
+        bam_dict['NM'] = iloc2nm[iloc]
+        if(md == True):
+            bam_dict['MD'] = iloc2md[iloc]
+            bam_dict['cs'] = iloc2cs[iloc]
+
+        a_list.append(P_alignmentstring(bam_dict))
+    return a_list
+def get_bam_dict_str_comments(mapinfo, query, qual, comments, contig2iloc, contig2seq, md, shortcs, cigar2cg, markunbalancetra, option):
+    #'hhk',         ,  '1', '+', 11, 9192, 2767041, 2776138, 60
+    #      0            1    2   3    4      5         6      7
+    #'18_19897150_+', '18', '+', 0, 4776, 19832244, 19837393, 1]
+    if(markunbalancetra == True):
+        mapinfo = reassign_mapq(mapinfo)
+    else:
+        for iloc in range(len(mapinfo)):
+            mapinfo[iloc] = list(mapinfo[iloc])
+
+    
+    hardclip = option['H']
+    
+    rc_query = str(Seq(query).reverse_complement())
+    #mapinfo.sort(key = sort_by_length)
+    #mapinfo = mapinfo[::-1]
+    mapinfo.sort(key = sortbycontig)
+    iloc2nm = dict()
+    iloc2md = dict()
+    iloc2cs = dict()
+    iloc2n_cigar = dict()
+    tmpiloc = -1
+    fakecigar = option['fakecigar']
+    if(fakecigar == True):
+        iloc2fakecigar = dict()
+        if(hardclip == True):
+            clipsyb = 'H'
+        else:
+            clipsyb = 'S'
+    if(md == False):
+        for item in mapinfo:
+            item[-1], n_cigar = mergecigar_n(item[-1])
+            tmpiloc += 1
+            if(item[2] == '+'):
+                nm = compute_NM_tag(query[item[3]: item[4]], get_refseq(item[1], item[5], item[6], contig2seq))
+            else:
+                nm = compute_NM_tag(rc_query[item[3]: item[4]], get_refseq(item[1], item[5], item[6], contig2seq))
+            iloc2nm[tmpiloc] = nm
+            iloc2n_cigar[tmpiloc] = n_cigar
+            if(fakecigar == True):
+                if(item[3] > 0):
+                    onefaketop = str(item[3]) + clipsyb
+                else:
+                    onefaketop = ''
+                if((len(query) - item[4]) > 0):
+                    onefaketail = str(len(query) - item[4]) + clipsyb
+                else:
+                    onefaketail = ''
+                tmpdiff = item[4] - item[3] - item[6] + item[5]
+                if(tmpdiff > 0):
+                    onefakebody = str(item[6] - item[5]) + 'M' + str(tmpdiff) + 'I'
+                elif(tmpdiff < 0):
+                    onefakebody = str(item[4] - item[3]) + 'M' + str(abs(tmpdiff)) + 'D'
+                else:
+                    onefakebody = str(item[4] - item[3]) + 'M'
+                iloc2fakecigar[tmpiloc] =  ''.join((onefaketop, onefakebody, onefaketail))
+    else:
+        for item in mapinfo:
+            tmpiloc += 1
+            if(item[2] == '+'):
+                tmp_query = query[item[3]: item[4]]
+                tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
+            else:
+                tmp_query = rc_query[item[3]: item[4]]
+                tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
+            cigarstring, mdstring, csstring, n_cigar = mergecigar_md_cs(item[-1], tmp_target, tmp_query, shortcs)
+            nm = compute_NM_tag(tmp_query, tmp_target)
+            item[-1] = cigarstring
+            iloc2nm[tmpiloc] = nm
+            iloc2md[tmpiloc] = mdstring
+            iloc2cs[tmpiloc] = csstring
+            iloc2n_cigar[tmpiloc] = n_cigar
+            if(fakecigar == True):
+                if(item[3] > 0):
+                    onefaketop = str(item[3]) + clipsyb
+                else:
+                    onefaketop = ''
+                if((len(query) - item[4]) > 0):
+                    onefaketail = str(len(query) - item[4]) + clipsyb
+                else:
+                    onefaketail = ''
+                tmpdiff = item[4] - item[3] - item[6] + item[5]
+                if(tmpdiff > 0):
+                    onefakebody = str(item[6] - item[5]) + 'M' + str(tmpdiff) + 'I'
+                elif(tmpdiff < 0):
+                    onefakebody = str(item[4] - item[3]) + 'M' + str(abs(tmpdiff)) + 'D'
+                else:
+                    onefakebody = str(item[4] - item[3]) + 'M'
+                iloc2fakecigar[tmpiloc] =  ''.join((onefaketop, onefakebody, onefaketail))
+
+    if((qual != None) and (len(qual) == len(query))):
+        query_qualities = qual
+        rc_query_qualities = query_qualities[::-1]
+    a_list = []
+    primary_iloc = 0
+    if(len(mapinfo) > 1):
+        if(mapinfo[0][7] == 1 and mapinfo[1][7] != 1):
+            primary_iloc = 1
+
+    #QNAME FLAG  RNAME  POS  MAPQ  CIGAR RNEXT  PNEXT  TLEN   SEQ   QUAL
+    for iloc in range(len(mapinfo)):
+        
+        bam_dict = dict()
+        if('rg-id' in option):
+            bam_dict['RG'] = option['rg-id']
+        primary = mapinfo[iloc]
+        bam_dict['QNAME'] = primary[0]
+        bam_dict['RNAME'] = primary[1]
+        if(iloc == primary_iloc):
+            base_value = 0
+        else:
+            base_value = 2048
+        if(primary[2] == '+'):
+            bam_dict['FLAG'] = str(base_value)
+
+        else:
+            bam_dict['FLAG'] = str(16 + base_value)
+
+
+        bam_dict['POS'] = str(primary[5] + 1)# SAM Format
+
+        if(iloc2n_cigar[iloc] > 65535):
+            if(cigar2cg == True):
+                bam_dict['CG'] = primary[8]
+                logging.info('Write long CIGAR to CG tag.')
+            else:
+                bam_dict['CIGAR'] = primary[8]
+        else:
+            bam_dict['CIGAR'] = primary[8]
+
+        if(len(mapinfo) > 1):
+            salist = []
+            tmpiloc = -1
+            for item in mapinfo:
+                tmpiloc += 1
+                if(tmpiloc == iloc):
+                    continue
+                mq = mapinfo[tmpiloc][7]
+                if(mq != 0):
+                    mq = 60
+                else:
+                    mq = 1
+                nm = iloc2nm[tmpiloc]
+                if(fakecigar == False):
+                    salist.append(''.join((item[1], ',', str(item[5]+1), ',', item[2], ',', item[8], ',', str(mq), ',', str(nm)+';')))
+                else:
+                    salist.append(''.join((item[1], ',', str(item[5]+1), ',', item[2], ',', iloc2fakecigar[tmpiloc], ',', str(mq), ',', str(nm)+';')))
+
+
+            bam_dict['SA'] = ''.join(salist)
+        mq = mapinfo[iloc][7]
+        if(mq != 0):
+            mq = 60
+        else:
+            mq = 1
+        item = primary
+
+        bam_dict['MAPQ'] = str(mq)
+
+
+        if(item[2] == '+'):
+            if(hardclip == False):
+                bam_dict['SEQ'] = query
+                if((qual != None) and (len(qual) == len(query))):
+                    bam_dict['QUAL'] = query_qualities
+            else:
+                bam_dict['SEQ'] = query[item[3]: item[4]]
+                if((qual != None) and (len(qual) == len(query))):
+                    bam_dict['QUAL'] = query_qualities[item[3]: item[4]]
+                
+
+            
+        else:
+            if(hardclip == False):
+                bam_dict['SEQ'] = rc_query
+                if((qual != None) and (len(qual) == len(query))):
+                    bam_dict['QUAL'] = rc_query_qualities
+            else:
+                bam_dict['SEQ'] = rc_query[item[3]: item[4]]
+                if((qual != None) and (len(qual) == len(query))):
+                    bam_dict['QUAL'] = rc_query_qualities[item[3]: item[4]]
+        bam_dict['NM'] = iloc2nm[iloc]
+        if(md == True):
+            bam_dict['MD'] = iloc2md[iloc]
+            bam_dict['cs'] = iloc2cs[iloc]
+
+        a_list.append(P_alignmentstring_comments(bam_dict, comments))
+    return a_list
+def get_reversed_chain_numpy_rough(raw_alignment_array, testseq_len):
+    if(len(raw_alignment_array) < 3):
+        return False, raw_alignment_array
+    np_counts_dict = {-1: 0, 1: 0}
+        
+    np_counts = np.unique(raw_alignment_array[:,2], return_counts = True)
+    for tmp_iloc_npcount in range(len(np_counts[0])):
+        np_counts_dict[np_counts[0][tmp_iloc_npcount]] += np_counts[1][tmp_iloc_npcount]
+
+    if(np_counts_dict[-1] > np_counts_dict[1]):
+
+        raw_alignment_array[:,0] = testseq_len - raw_alignment_array[:,0] - raw_alignment_array[:,3]
+        raw_alignment_array[:,2] *= -1 
+        return True, raw_alignment_array[::-1]
+    else:
+        return False, raw_alignment_array
