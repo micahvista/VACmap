@@ -16,12 +16,14 @@ Installation
 Usage
 ----------------------  
 
-    #Map long genomic reads:
+    Map long genomic reads:
+    ---------------------- 
     
     vacmap -ref /ref.fasta -read /read.fasta -mode S -t 8 | samtools sort -@4 > alignments.sorted.bam
     samtools index -@4 alignments.sorted.bam
 
-    #Map assembly:
+    Map assembly:
+    ---------------------- 
 
     vacmap -ref /ref.fasta -read /read.fasta -mode ams -t 8  -workdir /home/usr/workdir/ --H --fakecigar | samtools sort -@4 > alignments.sorted.bam
     samtools index -@4 alignments.sorted.bam
