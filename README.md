@@ -23,6 +23,7 @@ Usage
     samtools index -@4 alignments.sorted.bam
     
     *Memory usage: <20GB
+    *Speed: Processing HG002 50X ONT data (170GB) took 5.8 hours using 40 threads.
     
     Map assembly:
     ---------------------- 
@@ -37,6 +38,7 @@ Usage
     samtools index -@4 alignments.sorted.bam
     
     *Memory usage: 30GB-70GB Using more threads requires more memory.
+    *Speed: Processing HG002 v1.0 assembly(48 contigs) took 2.3 hours using 40 threads.
 
 Parameter
 ----------------------  
