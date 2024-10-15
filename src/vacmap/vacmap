@@ -259,7 +259,7 @@ else:
     pdict['debug'] = True
 logging.info('Debug: ' + str(pdict['debug']) + ' [--debug]')
 
-logging.info('Build 09292024')
+logging.info('Build 10152024')
 
 
 if(hit == True):
@@ -296,17 +296,17 @@ else:
                     
     refpath = pdict['ref']
     if(pdict['nowriteindex'] == False):
-        if((os.path.isfile(refpath+"_w"+pdict['w']+"_k"+pdict['k']+".mmi") == False)):
+        if((os.path.isfile(refpath+".w"+pdict['w']+"_k"+pdict['k']+".mmi") == False)):
             if(('mmi' != refpath[-3:])):
                 logging.info("Using minimap2 to build reference index")
                 import subprocess
-                subprocess.run(["minimap2", "-d", refpath+"_w"+pdict['w']+"_k"+pdict['k']+".mmi", refpath, "-w", pdict['w'], "-k", pdict['k']]) 
-                refpath = refpath+"_w"+pdict['w']+"_k"+pdict['k']+".mmi"
+                subprocess.run(["minimap2", "-d", refpath+".w"+pdict['w']+"_k"+pdict['k']+".mmi", refpath, "-w", pdict['w'], "-k", pdict['k'], "-I", "1000G"]) 
+                refpath = refpath+".w"+pdict['w']+"_k"+pdict['k']+".mmi"
                 if(os.path.isfile(refpath) == False):
                     logging.error("Failed to build reference index")
                     hit = True
         else:
-            refpath = refpath+"_w"+pdict['w']+"_k"+pdict['k']+".mmi"
+            refpath = refpath+".w"+pdict['w']+"_k"+pdict['k']+".mmi"
     if(hit == False):
         pdict['ref'] = refpath
 
@@ -353,7 +353,7 @@ else:
             header['RG'] = [rg_dict]
         else:
             logging.info('No RG tag.')
-        header['PG'] = [{'ID': 'VACmap', 'PN': 'VACmap', 'VN': '1.0.09232024', 'CL': command}] 
+        header['PG'] = [{'ID': 'VACmap', 'PN': 'VACmap', 'VN': '1.0.10152024', 'CL': command}] 
 
 
         rc_testseq = str(Seq(testseq).reverse_complement())
