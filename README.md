@@ -103,7 +103,14 @@ Parameter
         --rg-bc <string> Barcode sequence identifying the sample or library.
     
 
+Limitations
+----------------------  
 
+Single Reference Sequence Size Limit: 
+    2,147,483,647 bases.
+Single Query Sequence Size Limit:
+    2,147,483,647 bases for Modes L, H, S, R.
+    Unlimited for Mode asm.
 
 
 
