@@ -133,9 +133,6 @@ Contact
 
 If you experience any problems or have suggestions please create an issue or a pull request.
 
-Demo
--------
-This is a demonstration of the non-linear alignment algorithm used in VACmap: http://64.64.240.35:8050/. I hope this tool proves helpful for your research!
 
 Citation
 ---------
