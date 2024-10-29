@@ -118,6 +118,10 @@ Limitations
 Changelog
 ---------
 
+Full genome alignment. Oct 3, 2024
+
+Reduce runtime (45% faster for aligning HiFi data) and include options to decrease output size. Seq 3, 2024
+
 Reduce runtime (45% faster for aligning HiFi data) and include options to decrease output size. Seq 3, 2024
 
 Copy FASTA/Q comments to output. Aug 22, 2024
@@ -127,6 +131,14 @@ Improved speed, 40% faster. Aug 9, 2024
 Fix bug. Aug 5, 2024
 
 Enabled overlapping anchors in non-linear chaining. Jul 4, 2024
+
+TODO
+---------
+
+    Reimplement VACmap in C:
+        Seed: Completed
+        Non-linear Chaining: Completed
+        Extend: Under Development
 
 Contact
 -------
