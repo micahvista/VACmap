@@ -101,7 +101,8 @@ Parameter
         --rg-ks <string> RG header: Key sequence 
         --rg-pm <string> Platform model. Free-form text providing further details of the platform/technology used.
         --rg-bc <string> Barcode sequence identifying the sample or library.
-    
+
+
 
 Limitations
 ----------------------  
@@ -111,8 +112,11 @@ Limitations
     Single Query Sequence Size Limit:
         2,147,483,647 bases for Modes L, H, S, R.
         Unlimited for Mode asm.
+        
 
-
+Demo
+-------
+This is a demonstration of the non-linear alignment algorithm used in VACmap: http://[154.12.33.179:8050](http://154.12.33.179:8050/)/. I hope this tool proves helpful for your research!
 
 
 Changelog
@@ -132,13 +136,15 @@ Fix bug. Aug 5, 2024
 
 Enabled overlapping anchors in non-linear chaining. Jul 4, 2024
 
+
 TODO
 ---------
 
     Reimplement VACmap in C:
         Seed: Completed
         Non-linear Chaining: Completed
-        Extend: Under Development
+        Extend: Completed
+        Testing
 
 Contact
 -------
@@ -149,7 +155,7 @@ If you experience any problems or have suggestions please create an issue or a p
 Citation
 ---------
 
-[https://www.biorxiv.org/content/10.1101/2023.08.03.551566v2](https://www.biorxiv.org/content/10.1101/2023.08.03.551566v3)
+[https://www.biorxiv.org/content/10.1101/2023.08.03.551566v3](https://www.biorxiv.org/content/10.1101/2023.08.03.551566v3)
 
 License
 -------
