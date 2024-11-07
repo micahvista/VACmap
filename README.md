@@ -85,7 +85,7 @@ Parameter
 
         --Q Ignore base quality in the input file.
 
-        --fakecigar Use approximate CIAGR in the SA tag.
+        --fakecigar Use approximate CIGAR in the SA tag.
     
         --rg-id <string> Adds RG:Z:<string> to all alignments
         --rg-sm <string> RG header: Sample 
