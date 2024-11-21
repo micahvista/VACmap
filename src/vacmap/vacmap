@@ -259,7 +259,7 @@ else:
     pdict['debug'] = True
 logging.info('Debug: ' + str(pdict['debug']) + ' [--debug]')
 
-logging.info('Build 11062024')
+logging.info('Build 11212024')
 
 
 if(hit == True):
@@ -353,7 +353,7 @@ else:
             header['RG'] = [rg_dict]
         else:
             logging.info('No RG tag.')
-        header['PG'] = [{'ID': 'VACmap', 'PN': 'VACmap', 'VN': '1.0.11062024', 'CL': command}] 
+        header['PG'] = [{'ID': 'VACmap', 'PN': 'VACmap', 'VN': '1.0.11212024', 'CL': command}] 
 
 
         rc_testseq = str(Seq(testseq).reverse_complement())

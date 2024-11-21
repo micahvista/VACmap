@@ -18027,8 +18027,8 @@ def hit2work_1(one_mapinfo, index2contig, contig2start, testseq_len, skipcost, m
 
     #print_log(max_scores)
     #print_log()
-    if(hit == True and max_scores > 40):#hifi
-    #if(hit == True and max_scores > 60):#clr, ont
+    #if(hit == True and max_scores > 40):#hifi
+    if(hit == True and max_scores > 60):#clr, ont
 
         order = np.argsort(np.array(scores_list))[::-1]
         #print_log('scores_list[order[0]], len(path_list[order[0]])', scores_list[order[0]], len(path_list[order[0]]))
