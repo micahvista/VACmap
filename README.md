@@ -19,7 +19,7 @@ Usage
     Map long genomic reads:
     ---------------------- 
     
-    vacmap -ref /ref.fasta -read /read.fasta -mode S -t 8 | samtools sort -@4 > alignments.sorted.bam
+    vacmap -ref /ref.fasta -read /read.fasta -mode H -t 8 | samtools sort -@4 > alignments.sorted.bam
     samtools index -@4 alignments.sorted.bam
     
     *Memory usage: <20GB
@@ -60,9 +60,9 @@ Parameter
     Mapping:
         -mode H For aligning high error rate long read (Pacbio CLR, ONT). 
         -mode L For aligning low error rate long read (Pacbio HiFi). 
-        -mode S Increase the sensitivity for small variants. (<100bp). (Pacbio CLR, ONT, HiFi). 
+        -mode S Increase the sensitivity for small variants. (<100bp). (Pacbio HiFi). 
         -mode R Use a fixed value for the variation penalty, more sensitive to translocation events, 
-            such as gene conversion. (Pacbio CLR, ONT, HiFi). 
+            such as gene conversion. (Pacbio HiFi). 
         -mode asm For full genome alignment.   
         
         -k k-mer size (no larger than 28, deflaut: 15) # set -k 19 -w 10 for HiFi data 
