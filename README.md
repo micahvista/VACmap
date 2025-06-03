@@ -60,7 +60,7 @@ Parameter
     Mapping:
         -mode H For aligning high error rate long read (Pacbio CLR, ONT). 
         -mode L For aligning low error rate long read (Pacbio HiFi). 
-        -mode S Increase the sensitivity for small variants. (<100bp). (Pacbio HiFi). 
+        -mode S Increase the sensitivity for small variants. (<100bp).
         -mode R Use a fixed value for the variation penalty, more sensitive to translocation events, 
             such as gene conversion. (Pacbio HiFi). 
         -mode asm For full genome alignment.   
