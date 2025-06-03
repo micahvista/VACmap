@@ -151,19 +151,24 @@ if(pdict['mode'] == 'asm'):
         if(os.path.isdir(pdict['workdir']) == False):
             logging.info("workdir " + pdict['workdir'] + " does not exist; creating it automatically")
             os.mkdir(pdict['workdir'])
-pdict['local_skipcost'] = 30.
-pdict['golbal_skipcost'] = 30.
 pdict['local_kmersize'] = 9
 if(pdict['mode'] == 'L'):
-    pdict['local_skipcost'] = 40.
+    pdict['local_skipcost'] = 59.
     pdict['golbal_skipcost'] = 40.
 elif(pdict['mode'] == 'H'):
     pdict['local_skipcost'] = 40.
     pdict['golbal_skipcost'] = 40.
-
+else:
+    pdict['local_skipcost'] = 30.
+    pdict['golbal_skipcost'] = 30.
       
 if('maxdivergence' not in pdict):
-    pdict['maxdivergence'] = 0.5
+    if(pdict['mode'] == 'L'):
+        pdict['maxdivergence'] = 0.1
+    elif(pdict['mode'] == 'H'):
+        pdict['maxdivergence'] = 0.2
+    else:
+        pdict['maxdivergence'] = 0.5
 else:
     pdict['maxdivergence'] = float(pdict['maxdivergence'])
 
@@ -193,12 +198,22 @@ else:
 logging.info('Top N clusters: ' + str(pdict['c']) + ' [-c ' + str(pdict['c'])+']')
 
 if('markunbalancetra' not in pdict):
-    pdict['markunbalancetra'] = False
+    if(pdict['mode'] not in ('L', 'H')):
+        pdict['markunbalancetra'] = False
+    else:
+        pdict['markunbalancetra'] = True
 else:
     pdict['markunbalancetra'] = True
 logging.info('Set the MAPQ of the unbalanced translocation subalignment to 1: ' + str(pdict['markunbalancetra']) + ' [--markunbalancetra]')
 
-pdict['nodiscard'] = True
+if('nodiscard' not in pdict):
+    if(pdict['mode'] not in ('L', 'H')):
+        pdict['nodiscard'] = True
+    else:
+        pdict['nodiscard'] = False
+else:
+    pdict['nodiscard'] = True
+logging.info('Remove subalignments where the surrounding deletion and insertion have similar sizes: ' + str(pdict['nodiscard'] == False) + ' [--nodiscard]')
 
 
 if('golbalpenalty' in pdict):
@@ -259,7 +274,7 @@ else:
     pdict['debug'] = True
 logging.info('Debug: ' + str(pdict['debug']) + ' [--debug]')
 
-logging.info('Build 11212024')
+logging.info('Build 20250603')
 
 
 if(hit == True):
@@ -353,7 +368,7 @@ else:
             header['RG'] = [rg_dict]
         else:
             logging.info('No RG tag.')
-        header['PG'] = [{'ID': 'VACmap', 'PN': 'VACmap', 'VN': '1.0.11212024', 'CL': command}] 
+        header['PG'] = [{'ID': 'VACmap', 'PN': 'VACmap', 'VN': '1.0.20250521', 'CL': command}] 
 
 
         rc_testseq = str(Seq(testseq).reverse_complement())
