@@ -12,7 +12,7 @@ dependencies:
   - pysam
   - python=3.10.17
   - samtools
-  - setuptools=67.6.1=pyhd8ed1ab_0
+  - setuptools=67.6.1
   - zlib
   - cigar
   - matplotlib
