@@ -1,5 +1,6 @@
 # VACsim
 VACsim-—a tool to simulate and implant simple and complex structural variation to reference genome.
+The synthetic data used in VACmap paper can be download from: https://drive.google.com/drive/folders/1pJ-6DNNRuFKX-tgcRIKkfIsSMchzJTkX?usp=sharing.
 
 Input
 -----
