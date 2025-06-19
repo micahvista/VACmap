@@ -1,9 +1,18 @@
-'''   
- * @Title: VACmap 
- * @author: Ding Hongyu
- * @date: 25 05 2025
- * @version V1.0.0
-'''
+# VACmap - a long-read aligner for structural variation discovery
+# Copyright (C) 2023 Hongyu Ding
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import edlib
 
 import pandas as pd
@@ -25099,10 +25108,10 @@ def get_readmap_DP_test(readid, testseq, contig2start, contig2seq, index_object,
         new_path_list.append(np.array(one_path))
 
     if(need_reverse == False):
-        scores, raw_alignment_list = get_localmap_multi_all_forDP_inv_guide_list(new_path_list, testseq, rc_testseq, contig2start, contig2seq, kmersize = setting_kmersize, skipcost = local_skipcost, maxdiff = setting_maxdiff, maxgap = 99, shift = 1)
+        scores, raw_alignment_list = get_localmap_multi_all_forDP_inv_guide_list(new_path_list, testseq, rc_testseq, contig2start, contig2seq, kmersize = setting_kmersize, skipcost = local_skipcost, maxdiff = setting_maxdiff, maxgap = 50, shift = 1)
 
     else:
-        scores, raw_alignment_list = get_localmap_multi_all_forDP_inv_guide_list(new_path_list, rc_testseq, testseq, contig2start, contig2seq, kmersize = setting_kmersize, skipcost = local_skipcost, maxdiff = setting_maxdiff, maxgap = 99, shift = 1)
+        scores, raw_alignment_list = get_localmap_multi_all_forDP_inv_guide_list(new_path_list, rc_testseq, testseq, contig2start, contig2seq, kmersize = setting_kmersize, skipcost = local_skipcost, maxdiff = setting_maxdiff, maxgap = 50, shift = 1)
         testseq, rc_testseq = rc_testseq, testseq
 
     if(len(raw_alignment_list) <= 1):
@@ -27605,6 +27614,9 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_scar(one_map
 
 ###############
 
+readgapcost_list = np.zeros(100, dtype = np.float32)
+for readgapcost in range(1, 100):
+    readgapcost_list[readgapcost] = 0.1 * np.log2(readgapcost + 1)
 @njit            #one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500
 def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_fast_64(one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500, fast_t = 5):
 
@@ -27808,7 +27820,7 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_fast_64(one_
                 if(one_mapinfo[i][2] == one_mapinfo[j][2] and refgap >= 0 and readgap <= maxgap and gapcost <= maxdiff):
 
 
-                    test_scores = S[j] + bonus - gapcost_list[gapcost]
+                    test_scores = S[j] + bonus - gapcost_list[gapcost] - readgapcost_list[readgap]
 
                     if(test_scores > max_scores):
 
@@ -27895,7 +27907,7 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_fast_64(one_
                     if(one_mapinfo[i][2] == one_mapinfo[j][2] and refgap >= 0 and readgap <= maxgap and gapcost <= maxdiff):
 
 
-                        test_scores = S[j] + bonus - gapcost_list[gapcost]
+                        test_scores = S[j] + bonus - gapcost_list[gapcost] - readgapcost_list[readgap]
 
                         if(test_scores > max_scores):
 
@@ -28175,7 +28187,7 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_fast(one_map
                 if(one_mapinfo[i][2] == one_mapinfo[j][2] and refgap >= 0 and readgap <= maxgap and gapcost <= maxdiff):
 
 
-                    test_scores = S[j] + bonus - gapcost_list[gapcost]
+                    test_scores = S[j] + bonus - gapcost_list[gapcost] - readgapcost_list[readgap]
 
                     if(test_scores > max_scores):
 
@@ -28262,7 +28274,7 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_fast(one_map
                     if(one_mapinfo[i][2] == one_mapinfo[j][2] and refgap >= 0 and readgap <= maxgap and gapcost <= maxdiff):
 
 
-                        test_scores = S[j] + bonus - gapcost_list[gapcost]
+                        test_scores = S[j] + bonus - gapcost_list[gapcost] - readgapcost_list[readgap]
 
                         if(test_scores > max_scores):
 
@@ -28564,3 +28576,1408 @@ def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list(one_mapinfo,
         preitem = nowitem
     #print('normal', g_max_scores)
     return g_max_scores, path
+#testreadgap
+log2cache = np.array([0.5 * np.log2((gapcost + 1)) for gapcost in range(100000)])
+@njit            #one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500
+def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_mismatch_fast_64(one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500, fast_t = 5):
+
+    extra_size = len(extra) - 1
+    log2cache_size = len(log2cache) - 1
+    
+
+    oskipcost = skipcost
+    omaxdiff = maxdiff
+    repeat_weight = 20
+
+    
+
+    
+    g_max_scores = 0.
+    g_max_index = -1
+     
+    gapcost_list = np.zeros(maxdiff + 1, dtype = np.float64)
+    for gapcost in range(1, maxdiff + 1):
+        if(gapcost <= 10):
+            gapcost_list[gapcost] = (0.01 * kmersize * gapcost + 0.5 * np.log2(gapcost))
+        else:
+            gapcost_list[gapcost] = (0.01 * kmersize * gapcost + 2 * np.log2(gapcost))
+
+
+            
+
+    
+
+    n = len(one_mapinfo)
+    S = np.empty(n, np.float64)
+    S_i = np.empty(n, np.int64)
+    P = np.empty(n, np.int64)
+
+    
+
+    
+
+    
+    
+
+    coverage_dict = np.zeros(one_mapinfo[-1][0] + 5000, np.int64)
+    readlength = one_mapinfo[-1][0] + 1000
+    target_arr = np.zeros(n, dtype = np.int64)
+    for i in range(n):
+
+        coverage_dict[one_mapinfo[i][0]] = min(coverage_dict[one_mapinfo[i][0]]+1, repeat_weight)
+        if(one_mapinfo[i][2] == 1):
+            target_arr[i] = one_mapinfo[i][1] - one_mapinfo[i][0] + readlength 
+        else:
+            target_arr[i] = -(one_mapinfo[i][1] + one_mapinfo[i][0] + readlength) 
+            
+
+    
+    prereadloc = one_mapinfo[0][0] + one_mapinfo[0][3]
+
+    
+
+    testspace_en = 1
+    testspace_en_i = 1
+    
+    
+    
+    
+    S_arg_i = np.empty(n, np.int64)
+    S_arg_i[0] = 0
+    
+    i = 0
+
+    S[i] = one_mapinfo[i][3]
+    S_i[i] = one_mapinfo[i][3]
+    P[i] = -9999999
+    g_max_scores = one_mapinfo[i][3]
+    g_max_index = i
+    
+
+    
+    fast = False
+    
+    S_i_count = np.zeros(one_mapinfo[-1][0] + 50, dtype = np.int64)
+    S_i_count[one_mapinfo[i][3]] = 1
+    
+    max_score_i = 0
+    
+
+    
+    readpos_arr = one_mapinfo[:,0]
+    
+    for i in range(1, n):
+        #print_log('start: S[0:'+str(i)+']', S[0:i])
+
+        P[i] = -9999999
+        max_scores = one_mapinfo[i][3]
+        tmp_target_score = max_scores
+        
+        pre_index = -9999999
+        
+
+        
+        
+        if(prereadloc < one_mapinfo[i][0] + one_mapinfo[i][3]):                
+
+                
+            k = testspace_en_i
+            while(k < i):
+                
+                S_i_count[S_i[k]] += 1
+                if(S_i[k] > max_score_i):
+                    max_score_i = S_i[k]
+                
+                loc_in_sorted_S = insertpoint_score_distance(S_i, S_i[k], k, S_arg_i, target_arr[k], target_arr)
+
+                S_arg_i[loc_in_sorted_S + 1: k + 1] = S_arg_i[loc_in_sorted_S: k]
+                S_arg_i[loc_in_sorted_S] = k
+                
+                k += 1
+
+            testspace_en_i = k
+            
+            
+
+            
+            #skipcost = oskipcost + coverage_dict[one_mapinfo[i][0]]
+            #maxdiff = max(omaxdiff - coverage_dict[one_mapinfo[i][0]], 10)
+
+            
+            prereadloc = one_mapinfo[i][0] + one_mapinfo[i][3]
+            
+            
+            
+
+            
+            
+        c_score_i = max_score_i     
+        st_loc = testspace_en_i
+        en_loc = testspace_en_i
+        f_kmersize = one_mapinfo[i][3] + 1
+        while(c_score_i > (max_scores - f_kmersize)):
+            now_count = S_i_count[c_score_i]
+            if(now_count == 0):
+                c_score_i -= 1
+                continue
+            st_loc = en_loc - now_count
+            '''tmp_set = set()
+            tmp_set.add(-1)
+            if(st_loc < 0 or en_loc <= 0):
+                print('st_loc, en_loc', st_loc, en_loc)
+            for tmp_item in S[S_arg[st_loc: en_loc]]:
+                tmp_set.add(tmp_item//1)
+            if(len(tmp_set) != 2):
+                print(S[S_arg[st_loc: en_loc]])'''
+            if(now_count > fast_t):
+                
+
+                
+                #S_arg_j = closest2targetdistance(target_arr[i], target_arr, S_arg_i, st_loc, en_loc)
+                #S_arg_j = closest2target_1d_point_pos(target_arr, target_arr[i], st_loc, en_loc, S_arg_i, one_mapinfo[i][0], readpos_arr)
+                j = S_arg_i[closest2targetdistance(target_arr[i], target_arr, S_arg_i, st_loc, en_loc)]
+    
+
+
+                #########
+                readgap = (one_mapinfo[i][0] - one_mapinfo[j][0] - one_mapinfo[j][3])
+
+                ####
+                if((readgap < 0)):
+                    bonus = one_mapinfo[i][0] + one_mapinfo[i][3] - one_mapinfo[j][0] - one_mapinfo[j][3]
+                    if(bonus <= 0):
+                        continue
+                    readgap = 0
+                    overlap_size = one_mapinfo[j][0] +one_mapinfo[j][3] - one_mapinfo[i][0]
+                    if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                        if(one_mapinfo[i][2] == 1):
+                            refgap = one_mapinfo[i][1] + overlap_size - (one_mapinfo[j][1] + one_mapinfo[j][3])
+                        else:
+                            refgap = one_mapinfo[j][1] - (one_mapinfo[i][1] + bonus)
+                    else:
+                        if(one_mapinfo[j][2] == -1):
+                            refgap = one_mapinfo[i][1] + overlap_size - one_mapinfo[j][1] + 1
+                        else:
+                            refgap = one_mapinfo[i][1] + bonus - 1 - (one_mapinfo[j][1] + one_mapinfo[j][3])
+
+                else:
+                    bonus = one_mapinfo[i][3]
+                    if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                        if(one_mapinfo[i][2] == 1):
+                            refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
+                        else:
+                            refgap = (one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3])
+                    else:
+                        if(one_mapinfo[j][2] == -1):
+                            refgap = one_mapinfo[i][1] - one_mapinfo[j][1] + 1
+                        else:
+                            refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - 1 - one_mapinfo[j][1] - one_mapinfo[j][3]
+                ####
+
+                gapcost = abs(readgap - refgap)
+            
+
+                
+############################################################################
+                if(one_mapinfo[i][2] == one_mapinfo[j][2] and refgap >= 0 and readgap <= maxgap and gapcost <= maxdiff):
+
+
+                    test_scores = S[j] + bonus - gapcost_list[gapcost] - 0.5 * readgap
+
+                    if(test_scores > max_scores):
+
+                        max_scores = test_scores
+                        pre_index = j
+
+
+
+                else:
+
+                    tmp_penalty = skipcost + log2cache[min(log2cache_size, gapcost)]#+ extra[gapcost]
+                    test_scores = S[j] + bonus - tmp_penalty
+
+
+
+                    if(test_scores > max_scores):
+
+                        max_scores = test_scores
+                        pre_index = j
+                        
+############################################################################
+                    
+
+
+                
+            else:
+                tmp_j = en_loc - 1
+                while(tmp_j >= st_loc):
+                    
+
+                    
+                    j = S_arg_i[tmp_j]
+                    tmp_j -= 1
+                #for j in S_arg[st_loc: en_loc][::-1]:
+            
+                    #S_arg_j = closest2target_1d_point_pos(target_arr, target_arr[i], st_loc, en_loc, S_arg_i, one_mapinfo[i][0], readpos_arr)
+
+                    readgap = (one_mapinfo[i][0] - one_mapinfo[j][0] - one_mapinfo[j][3])
+
+                    ####
+                    if((readgap < 0)):
+                        bonus = one_mapinfo[i][0] + one_mapinfo[i][3] - one_mapinfo[j][0] - one_mapinfo[j][3]
+                        if(bonus <= 0):
+                            continue
+                        readgap = 0
+                        overlap_size = one_mapinfo[j][0] +one_mapinfo[j][3] - one_mapinfo[i][0]
+                        if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                            if(one_mapinfo[i][2] == 1):
+                                refgap = one_mapinfo[i][1] + overlap_size - (one_mapinfo[j][1] + one_mapinfo[j][3])
+                            else:
+                                refgap = one_mapinfo[j][1] - (one_mapinfo[i][1] + bonus)
+                        else:
+                            if(one_mapinfo[j][2] == -1):
+                                refgap = one_mapinfo[i][1] + overlap_size - one_mapinfo[j][1] + 1
+                            else:
+                                refgap = one_mapinfo[i][1] + bonus - 1 - (one_mapinfo[j][1] + one_mapinfo[j][3])
+
+                    else:
+                        bonus = one_mapinfo[i][3]
+                        if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                            if(one_mapinfo[i][2] == 1):
+                                refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
+                            else:
+                                refgap = (one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3])
+                        else:
+                            if(one_mapinfo[j][2] == -1):
+                                refgap = one_mapinfo[i][1] - one_mapinfo[j][1] + 1
+                            else:
+                                refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - 1 - one_mapinfo[j][1] - one_mapinfo[j][3]
+                    ####
+
+                    gapcost = abs(readgap - refgap)
+
+
+                    
+############################################################################
+                    if(one_mapinfo[i][2] == one_mapinfo[j][2] and refgap >= 0 and readgap <= maxgap and gapcost <= maxdiff):
+
+
+                        test_scores = S[j] + bonus - gapcost_list[gapcost] - 0.5 * readgap
+
+                        if(test_scores > max_scores):
+
+                            max_scores = test_scores
+                            pre_index = j
+
+
+
+                    else:
+
+                        tmp_penalty = skipcost + log2cache[min(log2cache_size, gapcost)]#+ extra[gapcost]
+                        test_scores = S[j] + bonus - tmp_penalty
+
+
+
+                        if(test_scores > max_scores):
+
+                            max_scores = test_scores
+                            pre_index = j
+
+############################################################################
+                        
+                        
+                        
+                        
+                        
+            en_loc = st_loc
+            
+            c_score_i -= 1
+
+            
+                
+                
+                
+                    
+        
+
+        S[i] = max_scores
+        S_i[i] = max_scores
+        P[i] = pre_index
+
+        if(max_scores > g_max_scores):
+
+            g_max_scores = max_scores
+            g_max_index = i
+
+        
+
+    path = []
+    take_index = g_max_index
+    path.append((one_mapinfo[take_index][0], one_mapinfo[take_index][1] , one_mapinfo[take_index][2], one_mapinfo[take_index][3]))
+    preitem = one_mapinfo[take_index]
+    while(True):
+        if((P[take_index] == -9999999)):
+            break
+        take_index = P[take_index]
+        nowitem = one_mapinfo[take_index]
+        if(preitem[0] < (nowitem[0] + nowitem[3])):
+            overlap_size = nowitem[0] + nowitem[3] - preitem[0]
+            if(preitem[2] == 1):
+                path[-1] = ((preitem[0] + overlap_size, preitem[1] + overlap_size, preitem[2], preitem[3] - overlap_size))
+            else:
+                path[-1] = ((preitem[0] + overlap_size, preitem[1], preitem[2], preitem[3] - overlap_size))
+        path.append((nowitem[0], nowitem[1], nowitem[2], nowitem[3]))
+
+                
+        preitem = nowitem
+    #print('fast', g_max_scores)
+    return g_max_scores, path
+@njit            #one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500
+def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_mismatch_fast(one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500, fast_t = 5):
+
+    extra_size = len(extra) - 1
+    log2cache_size = len(log2cache) - 1
+    
+
+    oskipcost = skipcost
+    omaxdiff = maxdiff
+    repeat_weight = 20
+
+    
+
+    
+    g_max_scores = 0.
+    g_max_index = -1
+     
+    gapcost_list = np.zeros(maxdiff + 1, dtype = np.float64)
+    for gapcost in range(1, maxdiff + 1):
+        if(gapcost <= 10):
+            gapcost_list[gapcost] = (0.01 * kmersize * gapcost + 0.5 * np.log2(gapcost))
+        else:
+            gapcost_list[gapcost] = (0.01 * kmersize * gapcost + 2 * np.log2(gapcost))
+
+
+            
+
+    
+
+    n = len(one_mapinfo)
+    S = np.empty(n, np.float64)
+    S_i = np.empty(n, np.int64)
+    P = np.empty(n, np.int32)
+
+    
+
+    
+
+    
+    
+
+    coverage_dict = np.zeros(one_mapinfo[-1][0] + 5000, np.int64)
+    readlength = one_mapinfo[-1][0] + 1000
+    target_arr = np.zeros(n, dtype = np.int64)
+    for i in range(n):
+
+        coverage_dict[one_mapinfo[i][0]] = min(coverage_dict[one_mapinfo[i][0]]+1, repeat_weight)
+        if(one_mapinfo[i][2] == 1):
+            target_arr[i] = one_mapinfo[i][1] - one_mapinfo[i][0] + readlength 
+        else:
+            target_arr[i] = -(one_mapinfo[i][1] + one_mapinfo[i][0] + readlength) 
+            
+
+    
+    prereadloc = one_mapinfo[0][0] + one_mapinfo[0][3]
+
+    
+
+    testspace_en = 1
+    testspace_en_i = 1
+    
+    
+    
+    
+    S_arg_i = np.empty(n, np.int32)
+    S_arg_i[0] = 0
+    
+    i = 0
+
+    S[i] = one_mapinfo[i][3]
+    S_i[i] = one_mapinfo[i][3]
+    P[i] = -9999999
+    g_max_scores = one_mapinfo[i][3]
+    g_max_index = i
+    
+
+    
+    fast = False
+    
+    S_i_count = np.zeros(one_mapinfo[-1][0] + 50, dtype = np.int64)
+    S_i_count[one_mapinfo[i][3]] = 1
+    
+    max_score_i = 0
+    
+
+    
+    readpos_arr = one_mapinfo[:,0]
+    
+    for i in range(1, n):
+        #print_log('start: S[0:'+str(i)+']', S[0:i])
+
+        P[i] = -9999999
+        max_scores = one_mapinfo[i][3]
+        tmp_target_score = max_scores
+        
+        pre_index = -9999999
+        
+
+        
+        
+        if(prereadloc < one_mapinfo[i][0] + one_mapinfo[i][3]):                
+
+                
+            k = testspace_en_i
+            while(k < i):
+                
+                S_i_count[S_i[k]] += 1
+                if(S_i[k] > max_score_i):
+                    max_score_i = S_i[k]
+                
+                loc_in_sorted_S = insertpoint_score_distance(S_i, S_i[k], k, S_arg_i, target_arr[k], target_arr)
+
+                S_arg_i[loc_in_sorted_S + 1: k + 1] = S_arg_i[loc_in_sorted_S: k]
+                S_arg_i[loc_in_sorted_S] = k
+                
+                k += 1
+
+            testspace_en_i = k
+            
+            
+
+            
+            #skipcost = oskipcost + coverage_dict[one_mapinfo[i][0]]
+            #maxdiff = max(omaxdiff - coverage_dict[one_mapinfo[i][0]], 10)
+
+            
+            prereadloc = one_mapinfo[i][0] + one_mapinfo[i][3]
+            
+            
+            
+
+            
+            
+        c_score_i = max_score_i     
+        st_loc = testspace_en_i
+        en_loc = testspace_en_i
+        f_kmersize = one_mapinfo[i][3] + 1
+        while(c_score_i > (max_scores - f_kmersize)):
+            now_count = S_i_count[c_score_i]
+            if(now_count == 0):
+                c_score_i -= 1
+                continue
+            st_loc = en_loc - now_count
+            '''tmp_set = set()
+            tmp_set.add(-1)
+            if(st_loc < 0 or en_loc <= 0):
+                print('st_loc, en_loc', st_loc, en_loc)
+            for tmp_item in S[S_arg[st_loc: en_loc]]:
+                tmp_set.add(tmp_item//1)
+            if(len(tmp_set) != 2):
+                print(S[S_arg[st_loc: en_loc]])'''
+            if(now_count > fast_t):
+                
+
+                
+                #S_arg_j = closest2targetdistance(target_arr[i], target_arr, S_arg_i, st_loc, en_loc)
+                #S_arg_j = closest2target_1d_point_pos(target_arr, target_arr[i], st_loc, en_loc, S_arg_i, one_mapinfo[i][0], readpos_arr)
+                j = S_arg_i[closest2targetdistance(target_arr[i], target_arr, S_arg_i, st_loc, en_loc)]
+    
+
+
+                #########
+                readgap = (one_mapinfo[i][0] - one_mapinfo[j][0] - one_mapinfo[j][3])
+
+                ####
+                if((readgap < 0)):
+                    bonus = one_mapinfo[i][0] + one_mapinfo[i][3] - one_mapinfo[j][0] - one_mapinfo[j][3]
+                    if(bonus <= 0):
+                        continue
+                    readgap = 0
+                    overlap_size = one_mapinfo[j][0] +one_mapinfo[j][3] - one_mapinfo[i][0]
+                    if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                        if(one_mapinfo[i][2] == 1):
+                            refgap = one_mapinfo[i][1] + overlap_size - (one_mapinfo[j][1] + one_mapinfo[j][3])
+                        else:
+                            refgap = one_mapinfo[j][1] - (one_mapinfo[i][1] + bonus)
+                    else:
+                        if(one_mapinfo[j][2] == -1):
+                            refgap = one_mapinfo[i][1] + overlap_size - one_mapinfo[j][1] + 1
+                        else:
+                            refgap = one_mapinfo[i][1] + bonus - 1 - (one_mapinfo[j][1] + one_mapinfo[j][3])
+
+                else:
+                    bonus = one_mapinfo[i][3]
+                    if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                        if(one_mapinfo[i][2] == 1):
+                            refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
+                        else:
+                            refgap = (one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3])
+                    else:
+                        if(one_mapinfo[j][2] == -1):
+                            refgap = one_mapinfo[i][1] - one_mapinfo[j][1] + 1
+                        else:
+                            refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - 1 - one_mapinfo[j][1] - one_mapinfo[j][3]
+                ####
+
+                gapcost = abs(readgap - refgap)
+            
+
+                
+############################################################################
+                if(one_mapinfo[i][2] == one_mapinfo[j][2] and refgap >= 0 and readgap <= maxgap and gapcost <= maxdiff):
+
+
+                    test_scores = S[j] + bonus - gapcost_list[gapcost] - 0.5 * readgap
+
+                    if(test_scores > max_scores):
+
+                        max_scores = test_scores
+                        pre_index = j
+
+
+
+                else:
+
+                    tmp_penalty = skipcost + log2cache[min(log2cache_size, gapcost)]#+ extra[gapcost]
+                    test_scores = S[j] + bonus - tmp_penalty
+
+
+
+                    if(test_scores > max_scores):
+
+                        max_scores = test_scores
+                        pre_index = j
+                        
+############################################################################
+                    
+
+
+                
+            else:
+                tmp_j = en_loc - 1
+                while(tmp_j >= st_loc):
+                    
+
+                    
+                    j = S_arg_i[tmp_j]
+                    tmp_j -= 1
+                #for j in S_arg[st_loc: en_loc][::-1]:
+            
+                    #S_arg_j = closest2target_1d_point_pos(target_arr, target_arr[i], st_loc, en_loc, S_arg_i, one_mapinfo[i][0], readpos_arr)
+
+                    readgap = (one_mapinfo[i][0] - one_mapinfo[j][0] - one_mapinfo[j][3])
+
+                    ####
+                    if((readgap < 0)):
+                        bonus = one_mapinfo[i][0] + one_mapinfo[i][3] - one_mapinfo[j][0] - one_mapinfo[j][3]
+                        if(bonus <= 0):
+                            continue
+                        readgap = 0
+                        overlap_size = one_mapinfo[j][0] +one_mapinfo[j][3] - one_mapinfo[i][0]
+                        if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                            if(one_mapinfo[i][2] == 1):
+                                refgap = one_mapinfo[i][1] + overlap_size - (one_mapinfo[j][1] + one_mapinfo[j][3])
+                            else:
+                                refgap = one_mapinfo[j][1] - (one_mapinfo[i][1] + bonus)
+                        else:
+                            if(one_mapinfo[j][2] == -1):
+                                refgap = one_mapinfo[i][1] + overlap_size - one_mapinfo[j][1] + 1
+                            else:
+                                refgap = one_mapinfo[i][1] + bonus - 1 - (one_mapinfo[j][1] + one_mapinfo[j][3])
+
+                    else:
+                        bonus = one_mapinfo[i][3]
+                        if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                            if(one_mapinfo[i][2] == 1):
+                                refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
+                            else:
+                                refgap = (one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3])
+                        else:
+                            if(one_mapinfo[j][2] == -1):
+                                refgap = one_mapinfo[i][1] - one_mapinfo[j][1] + 1
+                            else:
+                                refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - 1 - one_mapinfo[j][1] - one_mapinfo[j][3]
+                    ####
+
+                    gapcost = abs(readgap - refgap)
+
+
+                    
+############################################################################
+                    if(one_mapinfo[i][2] == one_mapinfo[j][2] and refgap >= 0 and readgap <= maxgap and gapcost <= maxdiff):
+
+
+                        test_scores = S[j] + bonus - gapcost_list[gapcost] - 0.5 * readgap
+
+                        if(test_scores > max_scores):
+
+                            max_scores = test_scores
+                            pre_index = j
+
+
+
+                    else:
+
+                        tmp_penalty = skipcost + log2cache[min(log2cache_size, gapcost)]#+ extra[gapcost]
+                        test_scores = S[j] + bonus - tmp_penalty
+
+
+
+                        if(test_scores > max_scores):
+
+                            max_scores = test_scores
+                            pre_index = j
+
+############################################################################
+                        
+                        
+                        
+                        
+                        
+            en_loc = st_loc
+            
+            c_score_i -= 1
+
+            
+                
+                
+                
+                    
+        
+
+        S[i] = max_scores
+        S_i[i] = max_scores
+        P[i] = pre_index
+
+        if(max_scores > g_max_scores):
+
+            g_max_scores = max_scores
+            g_max_index = i
+
+        
+
+    path = []
+    take_index = g_max_index
+    path.append((one_mapinfo[take_index][0], one_mapinfo[take_index][1] , one_mapinfo[take_index][2], one_mapinfo[take_index][3]))
+    preitem = one_mapinfo[take_index]
+    while(True):
+        if((P[take_index] == -9999999)):
+            break
+        take_index = P[take_index]
+        nowitem = one_mapinfo[take_index]
+        if(preitem[0] < (nowitem[0] + nowitem[3])):
+            overlap_size = nowitem[0] + nowitem[3] - preitem[0]
+            if(preitem[2] == 1):
+                path[-1] = ((preitem[0] + overlap_size, preitem[1] + overlap_size, preitem[2], preitem[3] - overlap_size))
+            else:
+                path[-1] = ((preitem[0] + overlap_size, preitem[1], preitem[2], preitem[3] - overlap_size))
+        path.append((nowitem[0], nowitem[1], nowitem[2], nowitem[3]))
+
+                
+        preitem = nowitem
+    #print('fast', g_max_scores)
+    return g_max_scores, path
+@njit            #one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500
+def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_mismatch(bed_array, one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500):
+
+    extra_size = len(extra) - 1
+    log2cache_size = len(log2cache) - 1
+    
+    oskipcost = skipcost
+    omaxdiff = maxdiff
+    repeat_weight = 20
+
+    
+    g_max_scores = 0.
+    g_max_index = -1
+     
+    gapcost_list = np.zeros(maxdiff + 1, dtype = np.float64)
+    for gapcost in range(1, maxdiff + 1):
+        if(gapcost <= 10):
+            gapcost_list[gapcost] = (0.01 * kmersize * gapcost + 0.5 * np.log2(gapcost))
+        else:
+            gapcost_list[gapcost] = (0.01 * kmersize * gapcost + 2 * np.log2(gapcost))
+    
+
+    n = len(one_mapinfo)
+    S = np.empty(n, np.float64)
+    P = np.empty(n, np.int64)
+
+  
+
+    opcount = 0
+    
+    
+
+    coverage_dict = np.zeros(one_mapinfo[-1][0] + 5000, np.int64)
+    for i in range(n):
+
+        coverage_dict[one_mapinfo[i][0]] = min(coverage_dict[one_mapinfo[i][0]]+1, repeat_weight)
+            
+
+    
+    prereadloc = one_mapinfo[0][0] + one_mapinfo[0][3]
+    #skipcost = oskipcost + coverage_dict[one_mapinfo[0][0]]
+    #maxdiff = max(omaxdiff - coverage_dict[one_mapinfo[0][0]], 10)
+    
+    testspace = np.empty(0, np.int64)
+
+    testspace_en = 1
+    
+
+    
+    
+    S_arg = np.empty(n, np.int64)
+    S_arg[0] = 0
+    
+    i = 0
+
+    S[i] = one_mapinfo[i][3]
+    P[i] = -9999999
+    g_max_scores = one_mapinfo[i][3]
+    g_max_index = i
+
+    c_repeat_weight = 0
+
+    if(bed_array[one_mapinfo[i][0]] > 0):
+        large_mismatch = True
+    else:
+        large_mismatch = False
+    
+    for i in range(1, n):
+        #print_log('start: S[0:'+str(i)+']', S[0:i])
+        
+
+        max_scores = one_mapinfo[i][3]
+        tmp_target_score = max_scores
+        
+        pre_index = -9999999
+        
+
+        
+        
+        if(prereadloc < (one_mapinfo[i][0] + one_mapinfo[i][3])):
+            if(opcount > 100000 and opcount / prereadloc > 1000):
+                if(n < np.iinfo(np.int32).max-10):
+                    return get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_mismatch_fast(one_mapinfo, kmersize = kmersize, skipcost = skipcost, maxdiff = maxdiff, maxgap = maxgap, fast_t = 5)
+                else:
+                    return get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_mismatch_fast_64(one_mapinfo, kmersize = kmersize, skipcost = skipcost, maxdiff = maxdiff, maxgap = maxgap, fast_t = 5)
+                
+            if(bed_array[one_mapinfo[i][0]] > 0):
+                large_mismatch = True
+            else:
+                large_mismatch = False
+                
+            k = testspace_en
+            while(k < i):
+                
+                loc_in_sorted_S = smallorequal2target_1d_point(S, S[k], k, S_arg) + 1
+
+                S_arg[loc_in_sorted_S + 1: k + 1] = S_arg[loc_in_sorted_S: k]
+                S_arg[loc_in_sorted_S] = k
+                
+                k += 1
+            
+            testspace_en = i
+            #c_repeat_weight = coverage_dict[one_mapinfo[i][0]]
+            #skipcost = oskipcost + c_repeat_weight
+            #maxdiff = max(omaxdiff - coverage_dict[one_mapinfo[i][0]], 10)
+            
+            prereadloc = one_mapinfo[i][0] + one_mapinfo[i][3]
+            
+               
+                      
+
+
+        if(large_mismatch == True):
+
+            for j in S_arg[:testspace_en][::-1]:
+                opcount += 1
+
+
+                if(S[j] < (max_scores - one_mapinfo[i][3])):
+
+                    break
+
+
+                readgap = (one_mapinfo[i][0] - one_mapinfo[j][0] - one_mapinfo[j][3])
+
+                ####
+                if((readgap < 0)):
+                    bonus = one_mapinfo[i][0] + one_mapinfo[i][3] - one_mapinfo[j][0] - one_mapinfo[j][3]
+                    if(bonus <= 0):
+                        continue
+                    readgap = 0
+                    overlap_size = one_mapinfo[j][0] +one_mapinfo[j][3] - one_mapinfo[i][0]
+                    if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                        if(one_mapinfo[i][2] == 1):
+                            refgap = one_mapinfo[i][1] + overlap_size - (one_mapinfo[j][1] + one_mapinfo[j][3])
+                        else:
+                            refgap = one_mapinfo[j][1] - (one_mapinfo[i][1] + bonus)
+                    else:
+                        if(one_mapinfo[j][2] == -1):
+                            refgap = one_mapinfo[i][1] + overlap_size - one_mapinfo[j][1] + 1
+                        else:
+                            refgap = one_mapinfo[i][1] + bonus - 1 - (one_mapinfo[j][1] + one_mapinfo[j][3])
+
+                else:
+                    bonus = one_mapinfo[i][3]
+                    if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                        if(one_mapinfo[i][2] == 1):
+                            refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
+                        else:
+                            refgap = (one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3])
+                    else:
+                        if(one_mapinfo[j][2] == -1):
+                            refgap = one_mapinfo[i][1] - one_mapinfo[j][1] + 1
+                        else:
+                            refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - 1 - one_mapinfo[j][1] - one_mapinfo[j][3]
+
+                ####
+
+
+
+
+                gapcost = abs(readgap - refgap)
+
+
+                if(one_mapinfo[i][2] == one_mapinfo[j][2] and refgap >= 0 and readgap <= maxgap and gapcost <= maxdiff):
+
+
+                    test_scores = S[j] + bonus - gapcost_list[gapcost] - 0.5 * readgap
+
+
+                    if(test_scores > max_scores):
+
+                        max_scores = test_scores
+                        pre_index = j
+
+
+
+                else:
+
+                    tmp_penalty = skipcost + log2cache[min(log2cache_size, gapcost)]#+ extra[gapcost]
+                    test_scores = S[j] + bonus - tmp_penalty
+
+
+
+                    if(test_scores > max_scores):
+
+                        max_scores = test_scores
+                        pre_index = j
+        else:
+            for j in S_arg[:testspace_en][::-1]:
+                opcount += 1
+
+
+                if(S[j] < (max_scores - one_mapinfo[i][3])):
+
+                    break
+
+
+                readgap = (one_mapinfo[i][0] - one_mapinfo[j][0] - one_mapinfo[j][3])
+
+                ####
+                if((readgap < 0)):
+                    bonus = one_mapinfo[i][0] + one_mapinfo[i][3] - one_mapinfo[j][0] - one_mapinfo[j][3]
+                    if(bonus <= 0):
+                        continue
+                    readgap = 0
+                    overlap_size = one_mapinfo[j][0] +one_mapinfo[j][3] - one_mapinfo[i][0]
+                    if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                        if(one_mapinfo[i][2] == 1):
+                            refgap = one_mapinfo[i][1] + overlap_size - (one_mapinfo[j][1] + one_mapinfo[j][3])
+                        else:
+                            refgap = one_mapinfo[j][1] - (one_mapinfo[i][1] + bonus)
+                    else:
+                        if(one_mapinfo[j][2] == -1):
+                            refgap = one_mapinfo[i][1] + overlap_size - one_mapinfo[j][1] + 1
+                        else:
+                            refgap = one_mapinfo[i][1] + bonus - 1 - (one_mapinfo[j][1] + one_mapinfo[j][3])
+
+                else:
+                    bonus = one_mapinfo[i][3]
+                    if(one_mapinfo[i][2] == one_mapinfo[j][2]):
+                        if(one_mapinfo[i][2] == 1):
+                            refgap = (one_mapinfo[i][1] - one_mapinfo[j][1] - one_mapinfo[j][3])
+                        else:
+                            refgap = (one_mapinfo[j][1] - one_mapinfo[i][1] - one_mapinfo[i][3])
+                    else:
+                        if(one_mapinfo[j][2] == -1):
+                            refgap = one_mapinfo[i][1] - one_mapinfo[j][1] + 1
+                        else:
+                            refgap = one_mapinfo[i][1] + one_mapinfo[i][3] - 1 - one_mapinfo[j][1] - one_mapinfo[j][3]
+
+                ####
+
+
+
+
+                gapcost = abs(readgap - refgap)
+
+
+                if(one_mapinfo[i][2] == one_mapinfo[j][2] and refgap >= 0 and readgap <= maxgap and gapcost <= maxdiff):
+
+
+                    test_scores = S[j] + bonus - gapcost_list[gapcost]  - readgapcost_list[readgap]
+
+                    if(test_scores > max_scores):
+
+                        max_scores = test_scores
+                        pre_index = j
+
+
+
+                else:
+
+                    tmp_penalty = skipcost + log2cache[min(log2cache_size, gapcost)]#+ extra[gapcost]
+                    test_scores = S[j] + bonus - tmp_penalty
+
+
+
+                    if(test_scores > max_scores):
+
+                        max_scores = test_scores
+                        pre_index = j
+                    
+
+
+
+                            
+
+
+        S[i] = max_scores
+        P[i] = pre_index
+
+        if(max_scores > g_max_scores):
+
+            g_max_scores = max_scores
+            g_max_index = i
+
+      
+
+        
+            
+        
+    path = []
+    take_index = g_max_index
+    path.append((one_mapinfo[take_index][0], one_mapinfo[take_index][1] , one_mapinfo[take_index][2], one_mapinfo[take_index][3]))
+    preitem = one_mapinfo[take_index]
+    while(True):
+        if((P[take_index] == -9999999)):
+            break
+        take_index = P[take_index]
+        nowitem = one_mapinfo[take_index]
+        if(preitem[0] < (nowitem[0] + nowitem[3])):
+            overlap_size = nowitem[0] + nowitem[3] - preitem[0]
+            if(preitem[2] == 1):
+                path[-1] = ((preitem[0] + overlap_size, preitem[1] + overlap_size, preitem[2], preitem[3] - overlap_size))
+            else:
+                path[-1] = ((preitem[0] + overlap_size, preitem[1], preitem[2], preitem[3] - overlap_size))
+        path.append((nowitem[0], nowitem[1], nowitem[2], nowitem[3]))
+
+                
+        preitem = nowitem
+    #print('normal', g_max_scores)
+    return g_max_scores, path
+@njit
+def get_localmap_multi_all_forDP_inv_guide_1(oreadstart, oreadend, one_mapinfo, raw_alignment_array, testseq, rc_testseq, contig2start, contig2seq, kmersize, skipcost, maxdiff, maxgap, shift = 1):#
+
+
+
+    def seq2hashtable_multi_test(multi, onelookuptable_s, onelookuptable_m, seq, start, kmersize):
+        skiphash = hash('N'*kmersize)
+        
+        for iloc in range(0, len(seq) - kmersize + 1, 1):
+            hashedkmer = hash(seq[iloc:iloc+kmersize])
+            if(skiphash == hashedkmer):
+                continue
+            if(hashedkmer not in onelookuptable_s):
+                onelookuptable_s[hashedkmer] = start + iloc
+            else:
+                if(hashedkmer in onelookuptable_m):
+                    onelookuptable_m[hashedkmer].append(start + iloc)
+                else:
+                    onelookuptable_m[hashedkmer] = List([onelookuptable_s[hashedkmer], start + iloc])
+                    multi.append(hashedkmer)
+        
+
+    if(raw_alignment_array[0][0] < raw_alignment_array[-1][0]):
+        look_span = max(raw_alignment_array[0][0], len(testseq) - raw_alignment_array[-1][0])+500
+    else:
+        look_span = max(raw_alignment_array[-1][0], len(testseq) - raw_alignment_array[0][0])+500
+    look_span = 7000
+    readgap = 0
+    pre = raw_alignment_array[0]
+    for now in raw_alignment_array[1:]:
+        if(abs(now[0] - pre[0]) > readgap):
+            readgap = abs(now[0] - pre[0])
+        pre = now
+    readgap += 1000  
+    readgap = max(readgap, 5000)
+    raw_alignment_array = raw_alignment_array[np.argsort(raw_alignment_array[:, 1])]
+
+    startandend = List([(raw_alignment_array[0][1], raw_alignment_array[0][1])])
+    for item in raw_alignment_array[1:]:
+        if(((item[1] - startandend[-1][1]) < readgap)):
+            startandend[-1] = (startandend[-1][0], item[1])
+        else:
+            if(startandend[-1][0] == startandend[-1][1]):
+                startandend.pop(-1)
+            startandend.append((item[1], item[1]))
+    if(startandend[-1][0] == startandend[-1][1]):
+        startandend.pop(-1)
+
+    local_lookuptable_s = Dict()
+    local_lookuptable_s[0] = 0
+    local_lookuptable_s.pop(0)
+
+    local_lookuptable_m = Dict()
+    local_lookuptable_m[0] = List([0])
+    local_lookuptable_m.pop(0)
+    
+    multi = [0]
+    multi.pop(0)
+
+    retry_diffcontig = False
+    for item in startandend:
+        min_ref, max_ref = item[0], item[1]
+        testcontig = pos2contig(min_ref, contig2start)
+        if(testcontig != pos2contig(max_ref, contig2start)):
+            retry_diffcontig = True
+            break
+        lookfurther = min(look_span, min_ref-contig2start[testcontig])
+        min_ref -= lookfurther
+        max_ref += look_span
+        refseq = contig2seq[testcontig][min_ref-contig2start[testcontig]: max_ref-contig2start[testcontig]]
+        seq2hashtable_multi_test(multi, local_lookuptable_s, local_lookuptable_m, refseq, min_ref, kmersize)
+    for hashedkmer in multi:
+        local_lookuptable_s.pop(hashedkmer)
+
+    if(retry_diffcontig == True):
+        startandend = List([(raw_alignment_array[0][1], raw_alignment_array[0][1])])
+        current_contig = pos2contig(raw_alignment_array[0][1], contig2start)
+        for item in raw_alignment_array[1:]:
+            if(((item[1] - startandend[-1][1]) < readgap) and (current_contig == pos2contig(item[1], contig2start))):
+                startandend[-1] = (startandend[-1][0], item[1])
+            else:
+                if(startandend[-1][0] == startandend[-1][1]):
+                    startandend.pop(-1)
+                startandend.append((item[1], item[1]))
+                current_contig = pos2contig(item[1], contig2start)
+        if(startandend[-1][0] == startandend[-1][1]):
+            startandend.pop(-1)
+
+        local_lookuptable_s = Dict()
+        local_lookuptable_s[0] = 0
+        local_lookuptable_s.pop(0)
+
+        local_lookuptable_m = Dict()
+        local_lookuptable_m[0] = List([0])
+        local_lookuptable_m.pop(0)
+        
+        multi = [0]
+        multi.pop(0)
+
+        retry_diffcontig = False
+        for item in startandend:
+            min_ref, max_ref = item[0], item[1]
+            testcontig = pos2contig(min_ref, contig2start)
+            if(testcontig != pos2contig(max_ref, contig2start)):
+                retry_diffcontig = True
+                break
+            lookfurther = min(look_span, min_ref-contig2start[testcontig])
+            min_ref -= lookfurther
+            max_ref += look_span
+            refseq = contig2seq[testcontig][min_ref-contig2start[testcontig]: max_ref-contig2start[testcontig]]
+            seq2hashtable_multi_test(multi, local_lookuptable_s, local_lookuptable_m, refseq, min_ref, kmersize)
+        for hashedkmer in multi:
+            local_lookuptable_s.pop(hashedkmer)
+
+
+    raw_alignment_array = raw_alignment_array[np.argsort(raw_alignment_array[:, 0])]
+    if(oreadend < 0):
+        readstart = max(0, raw_alignment_array[0][0]-500)
+        readend = min(len(testseq)-kmersize+1, raw_alignment_array[-1][0]+500)
+    else:
+        readstart, readend = oreadstart, oreadend
+
+    readstart = max(0, raw_alignment_array[0][0]-look_span)
+    readend = min(len(testseq)-kmersize+1, raw_alignment_array[-1][0]+look_span)
+
+
+    iloc = readstart
+    iloc -= shift
+
+
+    pointdict = Dict()
+    pointdict[21312] = (1, 1, 1, 1)
+    pointdict.pop(21312)
+
+    pointdict_key = [21312]
+    pointdict_key.pop(0)
+    
+    readposarr = raw_alignment_array[:, 0].astype(np.int32)
+
+    while(True):
+
+        iloc += shift
+        if(iloc >= readend):
+            break
+        forwardhashedkmer, reversehashedkmer = hash(testseq[iloc: iloc + kmersize]), hash(rc_testseq[-(iloc + kmersize): -iloc])
+        if(forwardhashedkmer == reversehashedkmer):
+            continue
+
+        biasvalue, biasvalue_1, closest_index, closest_index_1 = findClosest_1(readposarr, target = iloc)
+
+
+        interval = min(biasvalue + biasvalue_1 + 500, 2000)
+        closest_refpos_1 = raw_alignment_array[closest_index][1]
+        closest_refpos_2 = raw_alignment_array[closest_index_1][1]
+        upperrefloc =  (closest_refpos_1 + interval, closest_refpos_2 + interval)
+        lowerrefloc =  (closest_refpos_1 - interval, closest_refpos_2 - interval)
+        readgap = abs(iloc - raw_alignment_array[closest_index][0])
+
+        hashedkmer = forwardhashedkmer
+        if(hashedkmer in local_lookuptable_s):
+            refloc = local_lookuptable_s[hashedkmer]
+            refgap = abs(refloc - closest_refpos_1)
+            diff = abs(readgap - refgap)
+            if((diff < 500)):
+                item = (iloc, refloc, 1)
+                point = item[1] - item[0]
+
+                if(point in pointdict):
+                    cache_item_0, cache_item_1, cache_item_2, cache_item_3  = pointdict[point]
+                    if((cache_item_0 + cache_item_3) >= item[0]):
+                        bouns = item[0] - (cache_item_0 + cache_item_3) + kmersize
+                        if(bouns > 0):
+                            if((cache_item_3 + bouns < 20)):
+                                pointdict[point] = (cache_item_0, cache_item_1, 1, cache_item_3 + bouns)
+                            else:
+                                one_mapinfo.append((cache_item_0, cache_item_1, cache_item_2, cache_item_3))
+                                pointdict[point] = (cache_item_0 + cache_item_3, cache_item_1 + cache_item_3, 1, bouns)
+
+                                
+
+                    else:    
+                        one_mapinfo.append((cache_item_0, cache_item_1, cache_item_2, cache_item_3))
+                        pointdict[point] = (item[0], item[1], item[2], kmersize)
+                else:
+                    pointdict[point] = (item[0], item[1], item[2], kmersize)
+                    pointdict_key.append(point)
+
+        elif(hashedkmer in local_lookuptable_m):
+            for refloc in local_lookuptable_m[hashedkmer]:
+                refgap = abs(refloc - closest_refpos_1)
+                diff = abs(readgap - refgap)
+                if((diff < 500)):
+                    item = (iloc, refloc, 1)
+                    point = item[1] - item[0]
+
+                    if(point in pointdict):
+                        cache_item_0, cache_item_1, cache_item_2, cache_item_3  = pointdict[point]
+                        if((cache_item_0 + cache_item_3) >= item[0]):
+                            bouns = item[0] - (cache_item_0 + cache_item_3) + kmersize
+                            if(bouns > 0):
+                                if((cache_item_3 + bouns < 20)):
+                                    pointdict[point] = (cache_item_0, cache_item_1, 1, cache_item_3 + bouns)
+                                else:
+                                    one_mapinfo.append((cache_item_0, cache_item_1, cache_item_2, cache_item_3))
+                                    pointdict[point] = (cache_item_0 + cache_item_3, cache_item_1 + cache_item_3, 1, bouns)
+
+
+
+                        else:    
+                            one_mapinfo.append((cache_item_0, cache_item_1, cache_item_2, cache_item_3))
+                            pointdict[point] = (item[0], item[1], item[2], kmersize)
+                    else:
+                        pointdict[point] = (item[0], item[1], item[2], kmersize)
+                        pointdict_key.append(point)
+
+
+
+        hashedkmer = reversehashedkmer
+        if(hashedkmer in local_lookuptable_s):
+            refloc = local_lookuptable_s[hashedkmer]
+            refgap = abs(refloc - closest_refpos_1)
+            diff = abs(readgap - refgap)
+            if((diff < 500)):
+                item = (iloc, refloc, -1)
+                point = -(item[1] + item[0])
+
+                if(point in pointdict):
+                    cache_item_0, cache_item_1, cache_item_2, cache_item_3  = pointdict[point]
+                    if((cache_item_0 + cache_item_3) >= item[0]):
+                        bouns = item[0] - (cache_item_0 + cache_item_3) + kmersize
+                        if(bouns > 0):
+                            if((cache_item_3 + bouns < 20)):
+                                pointdict[point] = (cache_item_0, item[1], -1, cache_item_3 + bouns)
+                            else:
+                                one_mapinfo.append((cache_item_0, cache_item_1, cache_item_2, cache_item_3))
+                                pointdict[point] = (cache_item_0 + cache_item_3, item[1], -1, bouns)
+                                    #print_log(pointdict[point][-1])
+
+
+                    else:    
+                        one_mapinfo.append((cache_item_0, cache_item_1, cache_item_2, cache_item_3))
+                        pointdict[point] = (item[0], item[1], item[2], kmersize)
+                else:
+                    pointdict[point] = (item[0], item[1], item[2], kmersize)
+                    pointdict_key.append(point)
+
+        elif(hashedkmer in local_lookuptable_m):
+
+            for refloc in local_lookuptable_m[hashedkmer]:
+                refgap = abs(refloc - closest_refpos_1)
+                diff = abs(readgap - refgap)
+                if((diff < 500)):
+                    item = (iloc, refloc, -1)
+                    point = -(item[1] + item[0])
+
+                    if(point in pointdict):
+                        cache_item_0, cache_item_1, cache_item_2, cache_item_3  = pointdict[point]
+                        if((cache_item_0 + cache_item_3) >= item[0]):
+                            bouns = item[0] - (cache_item_0 + cache_item_3) + kmersize
+                            if(bouns > 0):
+                                if((cache_item_3 + bouns < 20)):
+                                    pointdict[point] = (cache_item_0, item[1], -1, cache_item_3 + bouns)
+                                else:
+                                    one_mapinfo.append((cache_item_0, cache_item_1, cache_item_2, cache_item_3))
+                                    pointdict[point] = (cache_item_0 + cache_item_3, item[1], -1, bouns)
+                                        #print_log(pointdict[point][-1])
+
+
+                        else:    
+                            one_mapinfo.append((cache_item_0, cache_item_1, cache_item_2, cache_item_3))
+                            pointdict[point] = (item[0], item[1], item[2], kmersize)
+                    else:
+                        pointdict[point] = (item[0], item[1], item[2], kmersize)
+                        pointdict_key.append(point)
+                        
+    for key in pointdict_key:
+        one_mapinfo.append(pointdict[key])
+    return readstart, readend
+@njit
+def get_localmap_multi_all_forDP_inv_guide_list(raw_alignment_array_list, testseq, rc_testseq, contig2start, contig2seq, kmersize, skipcost, maxdiff, maxgap, shift = 1):#
+    def getcounts(x):
+        return 1/len(x)
+    def drop_somechains(return_path_list):
+        iloclist = np.zeros(len(return_path_list) - 1, dtype = np.int64)
+
+        distance = np.ones(len(return_path_list) - 1, dtype = np.int64) * np.iinfo(np.int64).max
+        strandcount = np.zeros((len(return_path_list) - 1, 2))
+        chains_strandcount = np.zeros((len(return_path_list) - 1, 2))
+        for item in return_path_list[0]:
+            for chainiloc in range(len(return_path_list) - 1):
+                chain = return_path_list[chainiloc + 1]
+                if(item[0] >= chain[-1][0] and item[0] <= chain[0][0]):
+                    if(item[2] == 1):
+                        strandcount[chainiloc][0] += 1
+                    else:
+                        strandcount[chainiloc][1] += 1
+                while(chain[iloclist[chainiloc]][0] > item[0]):
+                    if(iloclist[chainiloc] < (len(chain) - 1)):
+                        iloclist[chainiloc] += 1
+                    else:
+                        break
+
+                testitem = chain[iloclist[chainiloc]]
+                if(abs(item[1] - testitem[1]) < distance[chainiloc]):
+                    distance[chainiloc] = abs(item[1] - testitem[1])
+                #print(item, testitem)
+            #print()
+        for chainiloc in range(len(return_path_list) - 1):
+            chain = return_path_list[chainiloc + 1]
+            for item in chain:
+                if(item[2] == 1):
+                    chains_strandcount[chainiloc][0] += 1
+                else:
+                    chains_strandcount[chainiloc][1] += 1
+        new_return_path_list = List([return_path_list[0]])
+        iloc = 0
+        for dis in distance: 
+            if((strandcount[iloc][0] > strandcount[iloc][1]) and (chains_strandcount[iloc][0] > chains_strandcount[iloc][1])):
+                keep = True
+            elif((strandcount[iloc][0] < strandcount[iloc][1]) and (chains_strandcount[iloc][0] < chains_strandcount[iloc][1])):
+                keep = True
+            else:
+                keep = False
+            iloc += 1
+            if((keep == False and (dis < 500)) or ((return_path_list[iloc][0][0] - return_path_list[iloc][-1][0]) < 100)):
+                continue
+            else:
+                new_return_path_list.append(return_path_list[iloc])
+        return new_return_path_list
+    def merge_chain(ochains):
+        def get_start(r_chain):
+            return r_chain[-1][0]
+        def get_length(r_chain):
+            return len(r_chain)
+        #print(len(ochains))
+        chains = ochains[1:]
+        chains.sort(key = get_start)
+        iloc = 0
+        while(iloc < len(chains) - 1):
+            jloc = iloc + 1
+            while(jloc < len(chains)):
+                if(chains[iloc][0][0] + chains[iloc][0][3] <= chains[jloc][-1][0]):
+                    if(chains[iloc][0][2] == chains[jloc][-1][2]):
+                        readgap = chains[jloc][-1][0] - chains[iloc][0][0] - chains[iloc][0][3]
+                        
+                        if(chains[iloc][0][2] == 1):
+                            refgap = chains[jloc][-1][1] - chains[iloc][0][1] - chains[iloc][0][3]
+                        else:
+                            refgap = chains[iloc][0][1] - chains[jloc][-1][1] - chains[jloc][-1][3]
+                        if(abs(readgap - refgap) < 500):
+                            #print(readgap, refgap)
+                            #print(chains[iloc][0])
+                            #print(chains[jloc][-1])
+                            #print()
+
+                            chains[iloc] = np.concatenate((chains[jloc], chains[iloc]))
+                            #for item in chains[iloc]:
+                                #print(item)
+                            #print(chains[iloc])
+                            chains.pop(jloc)
+                            continue
+                        
+                jloc += 1
+            iloc += 1
+        chains.sort(key = get_length)
+        return_chains = List([ochains[0]])
+        for chain in chains:
+            return_chains.append(chain)
+        #print(len(return_chains))
+        return return_chains
+    raw_alignment_array_list = merge_chain(raw_alignment_array_list)
+    one_mapinfo = [(-1, -1, -1, -1)]
+    one_mapinfo.pop(0)
+    raw_alignment_array_list = drop_somechains(raw_alignment_array_list)
+    raw_alignment_array_list.sort(key = getcounts)
+    readstart, readend = get_localmap_multi_all_forDP_inv_guide_1(-1, -1, one_mapinfo, raw_alignment_array_list[0], testseq, rc_testseq, contig2start, contig2seq, kmersize, skipcost, maxdiff, maxgap, shift = 1)
+    count = 2
+    if(len(raw_alignment_array_list) > 1):
+        bed_array = np.zeros(len(testseq))
+        for raw_alignment_array in raw_alignment_array_list[1:]:
+            tmp_readstart, tmp_readend = get_localmap_multi_all_forDP_inv_guide_1(readstart, readend, one_mapinfo, raw_alignment_array, testseq, rc_testseq, contig2start, contig2seq, kmersize, skipcost, maxdiff, maxgap, shift = 1)
+            bed_array[tmp_readstart: tmp_readend + kmersize] += 1
+            count += 1
+            if(count > 3):
+                break
+
+    one_mapinfo = np.array(one_mapinfo)
+    one_mapinfo = one_mapinfo[np.argsort(one_mapinfo[:, 0] + one_mapinfo[:, 3])]
+    if(len(raw_alignment_array_list) > 1):
+        return get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list_mismatch(bed_array, one_mapinfo, kmersize = kmersize, skipcost = skipcost, maxdiff = maxdiff, maxgap = maxgap)
+    else:
+        return get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_list(one_mapinfo, kmersize = kmersize, skipcost = skipcost, maxdiff = maxdiff, maxgap = maxgap)
