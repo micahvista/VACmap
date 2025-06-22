@@ -25108,10 +25108,10 @@ def get_readmap_DP_test(readid, testseq, contig2start, contig2seq, index_object,
         new_path_list.append(np.array(one_path))
 
     if(need_reverse == False):
-        scores, raw_alignment_list = get_localmap_multi_all_forDP_inv_guide_list(new_path_list, testseq, rc_testseq, contig2start, contig2seq, kmersize = setting_kmersize, skipcost = local_skipcost, maxdiff = setting_maxdiff, maxgap = 50, shift = 1)
+        scores, raw_alignment_list = get_localmap_multi_all_forDP_inv_guide_list(new_path_list, testseq, rc_testseq, contig2start, contig2seq, kmersize = setting_kmersize, skipcost = local_skipcost, maxdiff = setting_maxdiff, maxgap = 99, shift = 1)
 
     else:
-        scores, raw_alignment_list = get_localmap_multi_all_forDP_inv_guide_list(new_path_list, rc_testseq, testseq, contig2start, contig2seq, kmersize = setting_kmersize, skipcost = local_skipcost, maxdiff = setting_maxdiff, maxgap = 50, shift = 1)
+        scores, raw_alignment_list = get_localmap_multi_all_forDP_inv_guide_list(new_path_list, rc_testseq, testseq, contig2start, contig2seq, kmersize = setting_kmersize, skipcost = local_skipcost, maxdiff = setting_maxdiff, maxgap = 99, shift = 1)
         testseq, rc_testseq = rc_testseq, testseq
 
     if(len(raw_alignment_list) <= 1):
