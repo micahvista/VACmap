@@ -164,7 +164,7 @@ if(pdict['mode'] == 'asm'):
             os.mkdir(pdict['workdir'])
 pdict['local_kmersize'] = 9
 if(pdict['mode'] == 'L'):
-    pdict['local_skipcost'] = 50.
+    pdict['local_skipcost'] = 59.
     pdict['golbal_skipcost'] = 40.
 elif(pdict['mode'] == 'H'):
     pdict['local_skipcost'] = 40.
