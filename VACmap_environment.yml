@@ -1,4 +1,4 @@
-name: mammapv
+name: vacmap_env
 channels:
   - conda-forge
   - bioconda
@@ -16,7 +16,8 @@ dependencies:
   - zlib
   - cigar
   - matplotlib
+  - minimap2==2.29
   - pip
   - pip:
       - vacmap-index
-prefix: /home1/dinghongyu/miniconda3/envs/mammapv
+
