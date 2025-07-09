@@ -2,7 +2,11 @@
 VACmap-—a long-read aligner specifically designed for complex structural variation discovery.
 
 
+Requirements
+------------
 
+- Linux OS (tested on Ubuntu)
+- Python
 
 Installation
 ------------
