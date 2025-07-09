@@ -106,7 +106,10 @@ Parameter
         --rg-pm <string> Platform model. Free-form text providing further details of the platform/technology used.
         --rg-bc <string> Barcode sequence identifying the sample or library.
 
+Validation Installation
+---------------------- 
 
+To verify a successful installation, use the sample test data provided in the testdata folder. If the installation is successful, VACmap will generate three alignments.
 
 Limitations
 ----------------------  
