@@ -8,7 +8,7 @@ Requirements
 - Linux OS (tested on Ubuntu)
 - Python
 
-Installation
+Installation (Conda)
 ------------
 
     git clone https://github.com/micahvista/VACmap.git
@@ -16,6 +16,19 @@ Installation
     conda env create --name vacmap_env --file VACmap_environment.yml
     conda activate vacmap_env
     python setup.py install
+
+Installation (Singularity)
+------------
+    
+    git clone https://github.com/micahvista/VACmap.git
+    cd VACmap
+    
+    # Build the container
+    sudo singularity build vacmap.sif vacmap.def
+    
+    # Run VACmap in the container
+    singularity exec vacmap.sif vacmap -ref /path/to/ref.fasta -read /path/to/read.fasta -mode S -t 8 | samtools sort -@4 > alignments.sorted.bam
+
 
 Usage
 ----------------------  
