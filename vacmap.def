@@ -1,0 +1,71 @@
+Bootstrap: docker
+From: ubuntu:22.04
+
+%post
+    # Update and install basic dependencies
+    apt-get update && apt-get install -y \
+        wget \
+        git \
+        bzip2 \
+        ca-certificates \
+        curl \
+        && apt-get clean \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Install Miniconda
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh
+    bash /tmp/miniconda.sh -b -p /opt/conda
+    rm /tmp/miniconda.sh
+    
+    # Add conda to PATH
+    export PATH="/opt/conda/bin:$PATH"
+    
+    # Initialize conda
+    /opt/conda/bin/conda init bash
+    
+    # Clone VACmap repository
+    cd /opt
+    git clone https://github.com/micahvista/VACmap.git
+    cd VACmap
+    
+    # Create conda environment from yml file
+    /opt/conda/bin/conda env create --name vacmap_env --file VACmap_environment.yml
+    
+    # Activate environment and install VACmap
+    . /opt/conda/etc/profile.d/conda.sh
+    conda activate vacmap_env
+    python setup.py install
+    
+    # Clean up conda cache to reduce image size
+    /opt/conda/bin/conda clean -a -y
+
+%environment
+    # Set up conda environment
+    export PATH="/opt/conda/bin:$PATH"
+    export PATH="/opt/conda/envs/vacmap_env/bin:$PATH"
+    export CONDA_DEFAULT_ENV=vacmap_env
+    export CONDA_PREFIX=/opt/conda/envs/vacmap_env
+
+%runscript
+    # Default run command
+    exec vacmap "$@"
+
+%labels
+    Author micahvista
+    Version v1.0.0
+    Description VACmap: a long-read aligner specifically designed for complex structural variation discovery
+    License GPL-3.0
+
+%help
+    VACmap - a long-read aligner for complex structural variation discovery
+    
+    Usage examples:
+    
+    Map long genomic reads:
+    singularity exec vacmap.sif vacmap -ref /ref.fasta -read /read.fasta -mode H -t 8 | samtools sort -@4 > alignments.sorted.bam
+    
+    Map assembly:
+    singularity exec vacmap.sif vacmap -ref /ref.fasta -read /read.fasta -mode asm -t 8 -workdir /workdir/ --H --fakecigar | samtools sort -@4 > alignments.sorted.bam
+    
+    For more information:
+    https://github.com/micahvista/VACmap
