@@ -19,5 +19,5 @@ dependencies:
   - minimap2==2.29
   - pip
   - pip:
-      - vacmap-index
+      - vacmap-index==0.0.1
 
