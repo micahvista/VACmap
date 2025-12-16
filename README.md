@@ -48,13 +48,8 @@ Usage
     vacmap -ref /ref.fasta -read /read.fasta -mode asm -t 8  -workdir /home/usr/workdir/ --H --fakecigar | samtools sort -@4 > alignments.sorted.bam
     samtools index -@4 alignments.sorted.bam
     
-    or (lower memory usage)
     
-    vacmap -ref /ref.fasta -read /read.fasta -mode asm -t 8  -workdir /home/usr/workdir/ --H --fakecigar > alignments.sam
-    samtools sort -@4 alignments.sam > alignments.sorted.bam
-    samtools index -@4 alignments.sorted.bam
-    
-    *Memory usage: 30GB-70GB Using more threads requires more memory.
+    *Memory usage: 20GB-30GB.
     *Speed: Processing HG002 v1.0 assembly(48 contigs) took 2.3 hours using 40 threads.
 
 Parameter
