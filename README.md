@@ -129,9 +129,7 @@ Limitations
         Unlimited for Mode asm.
         
 
-Demo
--------
-This is a demonstration of the non-linear alignment algorithm used in VACmap: [http://154.12.33.179:8050](http://154.12.33.179:8050/)/. I hope this tool proves helpful for your research!
+
 
 
 Changelog
