@@ -35,9 +35,13 @@ Usage
 
     Map long genomic reads:
     ---------------------- 
+    VACmap can automatically sort output if the filename ends in .sorted.bam.
     
-    vacmap -ref /ref.fasta -read /read.fasta -mode H -t 8 | samtools sort -@4 > alignments.sorted.bam
-    samtools index -@4 alignments.sorted.bam
+    # Direct sorted output (Recommended)
+    vacmap -ref ref.fasta -read read.fasta -mode H -t 8 -o alignments.sorted.bam
+    
+    # Standard SAM output to stdout (piped to samtools)
+    vacmap -ref ref.fasta -read read.fasta -mode H -t 8 | samtools sort -@4 > alignments.sorted.bam
     
     *Memory usage: <20GB
     *Speed: Processing HG002 50X ONT data (170GB) took 5.8 hours using 40 threads.
@@ -45,8 +49,7 @@ Usage
     Map assembly:
     ---------------------- 
 
-    vacmap -ref /ref.fasta -read /read.fasta -mode asm -t 8  -workdir /home/usr/workdir/ --H --fakecigar | samtools sort -@4 > alignments.sorted.bam
-    samtools index -@4 alignments.sorted.bam
+    vacmap -ref /ref.fasta -read /read.fasta -mode asm -t 8  -workdir /home/usr/workdir/ --H --fakecigar -o alignments.sorted.bam
     
     
     *Memory usage: 20GB-30GB.
@@ -56,8 +59,8 @@ Parameter
 ----------------------  
     Mandatory parameter:
     
-        -ref The path of reference sequence. 
-        -read The path of long reads. 
+        -ref <path>: Path to reference FASTA file.
+        -read <path> [path ...]: Path to read file(s). Supports wildcards (e.g., *.fastq) and multiple inputs.
         -t The number of threads to use. (Note: In asm mode, using fewer threads results in lower memory usage.)
         -mode S|L|H|R|asm
         -workdir Only for asm mode, store temporary data. If the folder not existexist, VACmap will create it automatically.
@@ -65,9 +68,13 @@ Parameter
     Input:
         Supported read input types: FASTA, FASTA.GZ, FASTQ, FASTQ.GZ, BAM.
             [Warning: Duplicate reads (based on read names) will be processed only once.]
-        Multiple read input options:
-            -read read_1.fa read_2.fa ...
-            -read read_1.fa -read read_2.fa ...
+    Output Arguments
+        -o <path>: Output path. Defaults to stdout (-). Must end in .sam, .bam, or .sorted.bam. Note: Output is automatically sorted if the path ends in .sorted.bam.
+        
+        --force: Overwrite output file if it exists.
+        
+        
+        --nowriteindex: Do not save the reference index (.mmi) for reuse.
 
     Mapping:
         -mode H For aligning high error rate long read (Pacbio CLR, ONT). 
