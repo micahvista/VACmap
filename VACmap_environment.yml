@@ -11,13 +11,14 @@ dependencies:
   - pandas
   - pysam
   - python=3.10.17
-  - samtools
+  - samtools=1.23
   - setuptools=67.6.1
   - zlib
   - cigar
   - matplotlib
   - minimap2==2.29
   - pip
+  - psutil
   - pip:
-      - vacmap-index==0.0.1
+      - vacmap-index==0.0.2
 
