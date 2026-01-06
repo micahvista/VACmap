@@ -68,7 +68,7 @@ Parameter
     Input:
         Supported read input types: FASTA, FASTA.GZ, FASTQ, FASTQ.GZ, BAM.
             [Warning: Duplicate reads (based on read names) will be processed only once.]
-    Output Arguments
+    Output:
         -o <path>: Output path. Defaults to stdout (-). Must end in .sam, .bam, or .sorted.bam. Note: Output is automatically sorted if the path ends in .sorted.bam.
         --force: Overwrite output file if it exists.
         --nowriteindex: Do not save the reference index (.mmi) for reuse.
