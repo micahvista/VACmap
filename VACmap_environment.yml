@@ -20,5 +20,5 @@ dependencies:
   - pip
   - psutil
   - pip:
-      - vacmap-index==0.0.2
+      - vacmap-index==0.0.3
 
