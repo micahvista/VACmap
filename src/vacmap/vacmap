@@ -238,10 +238,12 @@ def main():
         if not args.workdir:
              logging.error('workdir not provided! -workdir /path/to/workdir')
              sys.exit(1)
-        pdict['workdir'] = args.workdir
+        pdict['workdir'] = str(args.workdir)
         if not os.path.isdir(pdict['workdir']):
             logging.info(f"Creating workdir: {pdict['workdir']}")
             os.mkdir(pdict['workdir'])
+        if(pdict['workdir'].endswith('/') == False):
+            pdict['workdir'] += '/'
 
     pdict['local_kmersize'] = 9
 
