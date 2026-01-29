@@ -43,6 +43,7 @@ import array
 import sys
 import logging
 import shutil
+import subprocess
 def print_log(*a):
     a = str(a)
     logging.info(a)
@@ -23201,7 +23202,6 @@ def mergecigar_md_cs_nm(cigarstring, target, query, shortcs = True):
 
     n_cigar = len(oplist)
     return ''.join(oplist), mdstring, csstring, n_cigar, edit_distance
-
 def assembly_get_readmap_DP_test(workdir, readid, assembly_seq, rc_assembly_seq, assembly_seq_len, index_object, pos2contig, contig2start, contig2seq, index2contig, option):
     if(len(assembly_seq) < 500000):
         onemapinfolist, (alignment_list,raw_alignment_list), TRA_signal, f_redo_ratio = get_readmap_DP_test(readid, assembly_seq, contig2start, contig2seq, index_object, index2contig, option, hastra = False, redo_ratio = 5, eqx = option['eqx'], check_num = -1)
@@ -23296,7 +23296,14 @@ def assembly_get_readmap_DP_test(workdir, readid, assembly_seq, rc_assembly_seq,
     if(len(path) <= 1):
         return []
     #second round Chaining
-    shutil.rmtree(workdir)
+    try:
+        shutil.rmtree(workdir)
+    except:
+        if os.path.exists(workdir):
+            subprocess.run(["rm", "-rf", workdir[:-1]])
+            if os.path.exists(workdir):
+                raise Exception('Failed to remove workdir:'+ workdir + '  ! Abort execution!')
+    
     os.mkdir(workdir)
 
     #*parameter*
@@ -23406,7 +23413,13 @@ def assembly_get_readmap_DP_test(workdir, readid, assembly_seq, rc_assembly_seq,
         preitem = nowitem
     path = path[::-1]
     alignment_list, onemapinfolist = ass_extend_func(path, readid, 60, assembly_seq, rc_assembly_seq, len(assembly_seq), kmersize, pos2contig, contig2start, contig2seq, 50, False, option, debug = False, eqx = option['eqx'])
-    shutil.rmtree(workdir)
+    try:
+        shutil.rmtree(workdir)
+    except:
+        if os.path.exists(workdir):
+            subprocess.run(["rm", "-rf", workdir[:-1]])
+            if os.path.exists(workdir):
+                raise Exception('Failed to remove workdir:'+ workdir + '  ! Abort execution!')
     return onemapinfolist
 def ass_extend_func(raw_alignment_list, readid, mapq, testseq, rc_testseq, testseq_len, setting_kmersize, pos2contig, contig2start, contig2seq, setting_maxdiff, need_reverse, option, debug = False, eqx = False):
 
@@ -23477,14 +23490,12 @@ def assembly_get_list_of_readmap_stdout(raw_queue, cooked_queue, minimap, contig
         logging.info('Processing ' + readidandseq[0])
         try:
             onemapinfolist = assembly_get_readmap_DP_test(option['workdir']+readidandseq[0]+'/', readidandseq[0], readidandseq[1], str(Seq(readidandseq[1]).reverse_complement()), len(readidandseq[1]), minimap, pos2contig, contig2start, contig2seq, index2contig, option)
-            logging.info(readidandseq[0] + ' is aligned. The alignments are now being outputted to standard output.')
+            logging.info(readidandseq[0] + ' is aligned.')
         except Exception as error:
-            logging.info(readidandseq[0] + ' is not aligned.')
-            if(option['debug'] == True):
-                
-                logging.error(error)
-                logging.info(readidandseq[0])
 
+            logging.error(readidandseq[0] + ' is not aligned.')
+            logging.error(error)
+            logging.error(readidandseq[0])
             continue
 
 
@@ -23530,13 +23541,12 @@ def assembly_get_list_of_readmap_stdout_comments(raw_queue, cooked_queue, minima
         logging.info('Processing ' + readidandseq[0])
         try:
             onemapinfolist = assembly_get_readmap_DP_test(option['workdir']+readidandseq[0]+'/', readidandseq[0], readidandseq[1], str(Seq(readidandseq[1]).reverse_complement()), len(readidandseq[1]), minimap, pos2contig, contig2start, contig2seq, index2contig, option)
-            logging.info(readidandseq[0] + ' is aligned. The alignments are now being outputted to standard output.')
+            logging.info(readidandseq[0] + ' is aligned.')
         except Exception as error:
 
-            if(option['debug'] == True):
-                logging.info(readidandseq[0] + ' is not aligned.')
-                logging.error(error)
-                logging.info(readidandseq[0])
+            logging.error(readidandseq[0] + ' is not aligned.')
+            logging.error(error)
+            logging.error(readidandseq[0])
 
             continue
 
