@@ -32,6 +32,10 @@ From: ubuntu:22.04
     # Create environment from yml file and install VACmap
     micromamba create -y -n vacmap_env -f VACmap_environment.yml
     micromamba run -n vacmap_env python -m pip install --no-cache-dir --no-build-isolation .
+    if ! head -n 1 /opt/micromamba/envs/vacmap_env/bin/vacmap | grep -q '^#!'; then
+        sed -i '1i#!/opt/micromamba/envs/vacmap_env/bin/python' /opt/micromamba/envs/vacmap_env/bin/vacmap
+        chmod +x /opt/micromamba/envs/vacmap_env/bin/vacmap
+    fi
 
     # Clean up package cache to reduce image size
     micromamba clean --all --yes
@@ -46,6 +50,7 @@ From: ubuntu:22.04
     # Set up micromamba environment
     export MAMBA_ROOT_PREFIX=/opt/micromamba
     export PATH="/opt/micromamba/envs/vacmap_env/bin:$PATH"
+    export MPLCONFIGDIR=/tmp/matplotlib
 
 %runscript
     # Default run command
@@ -53,6 +58,8 @@ From: ubuntu:22.04
 
 %test
     # Smoke test: verify VACmap entrypoint resolves and runs
+    export MPLCONFIGDIR=/tmp/matplotlib
+    mkdir -p "${MPLCONFIGDIR}"
     vacmap --help >/dev/null
 
 %labels
