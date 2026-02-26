@@ -4,6 +4,7 @@ From: ubuntu:22.04
 %post
     # Update and install basic dependencies
     apt-get update && apt-get install -y \
+        build-essential \
         wget \
         git \
         bzip2 \
@@ -29,7 +30,9 @@ From: ubuntu:22.04
     cd VACmap
     
     # Create conda environment from yml file
-    /opt/conda/bin/conda env create --name vacmap_env --file VACmap_environment.yml
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+    /opt/conda/bin/conda env create --name vacmap_env --file VACmap_environment.yml -y
     
     # Activate environment and install VACmap
     . /opt/conda/etc/profile.d/conda.sh
