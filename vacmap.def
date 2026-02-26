@@ -26,7 +26,7 @@ From: ubuntu:22.04
     
     # Clone VACmap repository
     cd /opt
-    git clone --branch "${VACMAP_REF}" --single-branch https://github.com/micahvista/VACmap.git
+    git clone --depth 1 --branch "${VACMAP_REF}" --single-branch https://github.com/micahvista/VACmap.git
     cd VACmap
     
     # Create environment from yml file and install VACmap
