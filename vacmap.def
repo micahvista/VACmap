@@ -31,7 +31,7 @@ From: ubuntu:22.04
     
     # Create environment from yml file and install VACmap
     micromamba create -y -n vacmap_env -f VACmap_environment.yml
-    micromamba run -n vacmap_env python -m pip install --no-cache-dir .
+    micromamba run -n vacmap_env python -m pip install --no-cache-dir --no-build-isolation .
 
     # Clean up package cache to reduce image size
     micromamba clean --all --yes
