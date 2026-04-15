@@ -504,6 +504,9 @@ def main():
                 tmp_st = c_time
                 tmp_count = count
 
+        if is_bam:
+            bamfile.close()
+
     # --- Cleanup ---
     # Signal workers to stop
     for _ in range(max_worker):
