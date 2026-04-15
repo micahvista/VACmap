@@ -212,8 +212,12 @@ def main():
             pdict['shortcs'] = True
 
     rg_metadata = collect_rg_metadata(args, pdict)
+    # Ensure a read group is always present (required by DeepSomatic and GATK-based tools)
+    if not rg_metadata:
+        rg_metadata = {"ID": "1", "SM": "sample", "PL": "PACBIO"}
+        pdict['rg-id'] = "1"
 
-    
+
 
     # Logic: Validate Output Path
     if pdict['o'] != "-":
