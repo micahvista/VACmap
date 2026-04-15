@@ -446,7 +446,11 @@ def main():
                 if is_bam:
                     name = rec.query_name
                     if hash(name) in unique_set: continue
-                    seq = rec.query_sequence.upper()
+                    seq = rec.query_sequence
+                    if seq is None:
+                        logging.warning(f"Skipping read {name}: no sequence in BAM record")
+                        continue
+                    seq = seq.upper()
                     raw_qual = rec.query_qualities  # array.array('B') of ints, or None
                     if rec.is_reverse:
                         seq = str(Seq(seq).reverse_complement())
