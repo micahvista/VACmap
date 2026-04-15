@@ -447,9 +447,15 @@ def main():
                     name = rec.query_name
                     if hash(name) in unique_set: continue
                     seq = rec.query_sequence.upper()
+                    raw_qual = rec.query_qualities  # array.array('B') of ints, or None
                     if rec.is_reverse:
                         seq = str(Seq(seq).reverse_complement())
-                    qual = None 
+                        if raw_qual is not None:
+                            raw_qual = raw_qual[::-1]  # reverse to match reversed sequence
+                    if raw_qual is not None and not pdict['Q']:
+                        qual = bytes(q + 33 for q in raw_qual).decode('ascii')
+                    else:
+                        qual = None
                 else:
                     # mp.fastx_read returns tuple
                     name = rec[0]
