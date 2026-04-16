@@ -291,3 +291,57 @@ def sam_bam_writer_asm(cooked_queue, header, out_path="-"):
                 process.kill()
     else:
         raise ValueError("Output path must end with .sam, .bam, sorted.bam or be '-' for stdout.")
+
+import re as _re
+
+
+def nm_from_cigar(cigar_string, query_seq, ref_seq):
+    """
+    Compute the NM tag consistent with the CIGAR string.
+
+    NM = mismatches (M ops) + inserted bases (I ops) + deleted bases (D ops).
+    This matches the definition validated by Picard/GATK.
+
+    Args:
+        cigar_string: CIGAR string, e.g. '3S50M2I10M1D5M4S'
+        query_seq:    Query (read) sequence. For alignments that include soft
+                      clips in the CIGAR, pass the FULL read so that S ops
+                      advance the position pointer correctly. For inner
+                      sub-alignments with no S ops, pass the aligned slice.
+        ref_seq:      Reference sequence covering the aligned region only.
+
+    Returns:
+        int: NM value >= 0
+    """
+    nm = 0
+    q_pos = 0
+    r_pos = 0
+    for m in _re.finditer(r'(\d+)([MIDNSHP=X])', cigar_string):
+        length = int(m.group(1))
+        op = m.group(2)
+        if op == 'M':
+            for i in range(length):
+                if query_seq[q_pos + i].upper() != ref_seq[r_pos + i].upper():
+                    nm += 1
+            q_pos += length
+            r_pos += length
+        elif op == 'I':
+            nm += length
+            q_pos += length
+        elif op == 'D':
+            nm += length
+            r_pos += length
+        elif op == 'N':
+            r_pos += length
+        elif op == 'S':
+            q_pos += length
+        elif op in ('H', 'P'):
+            pass
+        elif op == '=':
+            q_pos += length
+            r_pos += length
+        elif op == 'X':
+            nm += length
+            q_pos += length
+            r_pos += length
+    return nm
