@@ -294,6 +294,8 @@ def sam_bam_writer_asm(cooked_queue, header, out_path="-"):
 
 import re as _re
 
+_CIGAR_RE = _re.compile(r'(\d+)([MIDNSHP=X])')
+
 
 def nm_from_cigar(cigar_string, query_seq, ref_seq):
     """
@@ -316,7 +318,7 @@ def nm_from_cigar(cigar_string, query_seq, ref_seq):
     nm = 0
     q_pos = 0
     r_pos = 0
-    for m in _re.finditer(r'(\d+)([MIDNSHP=X])', cigar_string):
+    for m in _CIGAR_RE.finditer(cigar_string):
         length = int(m.group(1))
         op = m.group(2)
         if op == 'M':
