@@ -212,8 +212,17 @@ def main():
             pdict['shortcs'] = True
 
     rg_metadata = collect_rg_metadata(args, pdict)
+    # Ensure a read group is always present (required by DeepSomatic and GATK-based tools)
+    if not rg_metadata:
+        rg_metadata = {"ID": "1", "SM": "sample"}
+        pdict['rg-id'] = "1"
+        logging.warning(
+            "No --rg-pl specified; PL field omitted from the default read group. "
+            "Picard ValidateSamFile will report MISSING_PLATFORM_VALUE. "
+            "Pass --rg-pl PACBIO (or ONT) to suppress this."
+        )
 
-    
+
 
     # Logic: Validate Output Path
     if pdict['o'] != "-":
@@ -446,10 +455,20 @@ def main():
                 if is_bam:
                     name = rec.query_name
                     if hash(name) in unique_set: continue
-                    seq = rec.query_sequence.upper()
+                    seq = rec.query_sequence
+                    if seq is None:
+                        logging.warning(f"Skipping read {name}: no sequence in BAM record")
+                        continue
+                    seq = seq.upper()
+                    raw_qual = rec.query_qualities  # array.array('B') of ints, or None
                     if rec.is_reverse:
                         seq = str(Seq(seq).reverse_complement())
-                    qual = None 
+                        if raw_qual is not None:
+                            raw_qual = raw_qual[::-1]  # reverse to match reversed sequence
+                    if raw_qual is not None and not pdict['Q']:
+                        qual = bytes(q + 33 for q in raw_qual).decode('ascii')
+                    else:
+                        qual = None
                 else:
                     # mp.fastx_read returns tuple
                     name = rec[0]
@@ -493,6 +512,9 @@ def main():
                 
                 tmp_st = c_time
                 tmp_count = count
+
+        if is_bam:
+            bamfile.close()
 
     # --- Cleanup ---
     # Signal workers to stop

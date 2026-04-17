@@ -38,6 +38,7 @@ from io import StringIO
 import multiprocessing
 import os
 import vacmap_index as mp
+from vacmap.output_functions import nm_from_cigar
 import gzip
 import array
 import sys
@@ -326,8 +327,6 @@ def get_contig2start(contig, contig2start):
 
 import array
 
-def compute_NM_tag(query, target):
-    return edlib.align(query = query, target = target, task = 'distance')['editDistance']
 
 @njit
 def get_optimal_chain_sortbyreadpos_forSV_inv_test_merged_fine_numpy(one_mapinfo, kmersize = 15, skipcost = 50., maxdiff = 30, maxgap = 500):
@@ -20479,9 +20478,9 @@ def get_bam_dict_str(mapinfo, query, qual, contig2iloc, contig2seq, md, shortcs,
             item[-1], n_cigar = mergecigar_n(item[-1])
             tmpiloc += 1
             if(item[2] == '+'):
-                nm = compute_NM_tag(query[item[3]: item[4]], get_refseq(item[1], item[5], item[6], contig2seq))
+                nm = nm_from_cigar(item[8], query, get_refseq(item[1], item[5], item[6], contig2seq))
             else:
-                nm = compute_NM_tag(rc_query[item[3]: item[4]], get_refseq(item[1], item[5], item[6], contig2seq))
+                nm = nm_from_cigar(item[8], rc_query, get_refseq(item[1], item[5], item[6], contig2seq))
             iloc2nm[tmpiloc] = nm
             iloc2n_cigar[tmpiloc] = n_cigar
             if(fakecigar == True):
@@ -20511,7 +20510,7 @@ def get_bam_dict_str(mapinfo, query, qual, contig2iloc, contig2seq, md, shortcs,
                 tmp_query = rc_query[item[3]: item[4]]
                 tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
             cigarstring, mdstring, csstring, n_cigar = mergecigar_md_cs(item[-1], tmp_target, tmp_query, shortcs)
-            nm = compute_NM_tag(tmp_query, tmp_target)
+            nm = nm_from_cigar(cigarstring, tmp_query, tmp_target)
             item[-1] = cigarstring
             iloc2nm[tmpiloc] = nm
             iloc2md[tmpiloc] = mdstring
@@ -20660,9 +20659,9 @@ def get_bam_dict_str_comments(mapinfo, query, qual, comments, contig2iloc, conti
             item[-1], n_cigar = mergecigar_n(item[-1])
             tmpiloc += 1
             if(item[2] == '+'):
-                nm = compute_NM_tag(query[item[3]: item[4]], get_refseq(item[1], item[5], item[6], contig2seq))
+                nm = nm_from_cigar(item[8], query, get_refseq(item[1], item[5], item[6], contig2seq))
             else:
-                nm = compute_NM_tag(rc_query[item[3]: item[4]], get_refseq(item[1], item[5], item[6], contig2seq))
+                nm = nm_from_cigar(item[8], rc_query, get_refseq(item[1], item[5], item[6], contig2seq))
             iloc2nm[tmpiloc] = nm
             iloc2n_cigar[tmpiloc] = n_cigar
             if(fakecigar == True):
@@ -20692,7 +20691,7 @@ def get_bam_dict_str_comments(mapinfo, query, qual, comments, contig2iloc, conti
                 tmp_query = rc_query[item[3]: item[4]]
                 tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
             cigarstring, mdstring, csstring, n_cigar = mergecigar_md_cs(item[-1], tmp_target, tmp_query, shortcs)
-            nm = compute_NM_tag(tmp_query, tmp_target)
+            nm = nm_from_cigar(cigarstring, tmp_query, tmp_target)
             item[-1] = cigarstring
             iloc2nm[tmpiloc] = nm
             iloc2md[tmpiloc] = mdstring
