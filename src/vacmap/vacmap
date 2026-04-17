@@ -216,6 +216,11 @@ def main():
     if not rg_metadata:
         rg_metadata = {"ID": "1", "SM": "sample"}
         pdict['rg-id'] = "1"
+        logging.warning(
+            "No --rg-pl specified; PL field omitted from the default read group. "
+            "Picard ValidateSamFile will report MISSING_PLATFORM_VALUE. "
+            "Pass --rg-pl PACBIO (or ONT) to suppress this."
+        )
 
 
 
