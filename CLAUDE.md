@@ -48,7 +48,7 @@ Run DeepSomatic using flag `--model-type PACBIO`.
 
 ## DeepSomatic compatibility
 
-VACmap output is compatible with DeepSomatic without extra flags. A default read group (`ID: 1, SM: sample, PL: PACBIO`) is injected automatically when `--rg-id` is not provided. To customise, pass `--rg-id <id> --rg-sm <sample> --rg-pl PACBIO`.
+VACmap output is compatible with DeepSomatic without extra flags. A default read group (`ID: 1, SM: sample`) is injected automatically when `--rg-id` is not provided. To customise, pass `--rg-id <id> --rg-sm <sample> --rg-pl PACBIO`.
 
 
 ## Linting
