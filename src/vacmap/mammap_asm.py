@@ -23201,15 +23201,16 @@ def mergecigar_md_cs_nm(cigarstring, target, query, shortcs = True):
 
     n_cigar = len(oplist)
     return ''.join(oplist), mdstring, csstring, n_cigar, edit_distance
-def assembly_get_readmap_DP_test(workdir, readid, assembly_seq, rc_assembly_seq, assembly_seq_len, index_object, pos2contig, contig2start, contig2seq, index2contig, option):
+def assembly_get_readmap_DP_test(oworkdir, readid, assembly_seq, rc_assembly_seq, assembly_seq_len, index_object, pos2contig, contig2start, contig2seq, index2contig, option):
     if(len(assembly_seq) < 500000):
         onemapinfolist, (alignment_list,raw_alignment_list), TRA_signal, f_redo_ratio = get_readmap_DP_test(readid, assembly_seq, contig2start, contig2seq, index_object, index2contig, option, hastra = False, redo_ratio = 5, eqx = option['eqx'], check_num = -1)
         return onemapinfolist
-    if(os.path.isdir(workdir) == True):
-        logging.error('Directory '+ workdir + '  exists! Abort execution!')
-        raise Exception('Directory '+ workdir + '  exists! Abort execution!')
+    workdir = oworkdir + 'First/'
+    if(os.path.isdir(oworkdir) == True):
+        logging.error('Directory '+ oworkdir + '  exists! Abort execution!')
+        raise Exception('Directory '+ oworkdir + '  exists! Abort execution!')
 
-    os.mkdir(workdir)
+    os.makedirs(workdir)
 
     #*parameter*
     kmersize = index_object.k
@@ -23301,8 +23302,8 @@ def assembly_get_readmap_DP_test(workdir, readid, assembly_seq, rc_assembly_seq,
         if os.path.exists(workdir):
             subprocess.run(["rm", "-rf", workdir[:-1]])
             if os.path.exists(workdir):
-                raise Exception('Failed to remove workdir:'+ workdir + '  ! Abort execution!')
-    
+                logging.info('Failed to remove temp directory ' + workdir)
+    workdir = oworkdir + 'Second/'
     os.mkdir(workdir)
 
     #*parameter*
@@ -23413,12 +23414,12 @@ def assembly_get_readmap_DP_test(workdir, readid, assembly_seq, rc_assembly_seq,
     path = path[::-1]
     alignment_list, onemapinfolist = ass_extend_func(path, readid, 60, assembly_seq, rc_assembly_seq, len(assembly_seq), kmersize, pos2contig, contig2start, contig2seq, 50, False, option, debug = False, eqx = option['eqx'])
     try:
-        shutil.rmtree(workdir)
+        shutil.rmtree(oworkdir)
     except:
-        if os.path.exists(workdir):
-            subprocess.run(["rm", "-rf", workdir[:-1]])
-            if os.path.exists(workdir):
-                raise Exception('Failed to remove workdir:'+ workdir + '  ! Abort execution!')
+        if os.path.exists(oworkdir):
+            subprocess.run(["rm", "-rf", oworkdir[:-1]])
+            if os.path.exists(oworkdir):
+                logging.info('Failed to remove temp directory ' + oworkdir)
     return onemapinfolist
 def ass_extend_func(raw_alignment_list, readid, mapq, testseq, rc_testseq, testseq_len, setting_kmersize, pos2contig, contig2start, contig2seq, setting_maxdiff, need_reverse, option, debug = False, eqx = False):
 
