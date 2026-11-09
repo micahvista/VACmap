@@ -7962,7 +7962,9 @@ def decode_hit(index_object, index2contig, testseq, testseq_len, contig2start, k
     need_reverse, one_mapinfo = get_reversed_chain_numpy_rough(np.array(index_object.map(testseq, check_num = check_num,mid_occ = mid_occ)), testseq_len)
     if(len(one_mapinfo) <= 2):
         scores, path = 0., []
-        return 0, scores, path, factor, []
+        # 'factor' (redo ratio) is not computed on this path; hit2work_1's own
+        # "nothing to do" sentinel is -1., so reuse it instead of UnboundLocalError.
+        return 0, scores, path, -1., []
     #print_log(need_reverse)
     #print_log('index_object.map', time.time() - st)
     maxgap = 1000
