@@ -32,6 +32,7 @@ import matplotlib.pyplot as plt
 # Note: Ensure these are in your PYTHONPATH
 import vacmap_index as mp
 import vacmap.output_functions as output_functions
+from vacmap.index_builder import build_index, index_path
 
 # Logging setup
 logging.basicConfig(
@@ -323,17 +324,13 @@ def main():
     # --- Index Building/Loading ---
     refpath = pdict['ref']
     if not pdict['nowriteindex']:
-        index_name = f"{refpath}.w{pdict['w']}_k{pdict['k']}.mmi"
+        index_name = index_path(refpath, pdict['w'], pdict['k'])
         if not os.path.isfile(index_name):
             if not refpath.endswith('mmi'):
-                logging.info("Using minimap2 to build reference index")
-                import subprocess
-                cmd = ["minimap2", "-d", index_name, refpath, "-w", str(pdict['w']), "-k", str(pdict['k']), "-I", "1000G"]
-                subprocess.run(cmd)
-                refpath = index_name
-                if not os.path.isfile(refpath):
-                    logging.error("Failed to build reference index")
+                ok, _ = build_index(refpath, index_name, pdict['w'], pdict['k'])
+                if not ok:
                     sys.exit(1)
+                refpath = index_name
         else:
             refpath = index_name
     
