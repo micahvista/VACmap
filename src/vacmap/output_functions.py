@@ -226,6 +226,19 @@ def nm_from_cigar(cigar_string, query_seq, ref_seq):
             "soft-clipped %d) for CIGAR %r; pass the FULL read when the CIGAR "
             "contains soft clips" % (len(query_seq), q_consumed + q_soft,
                                      q_consumed, q_soft, cigar_string))
+    # Second guard (2026-11-09): the reference argument is a *segment* slice,
+    # so its length must equal the CIGAR's reference span.  A too-short slice
+    # raised IndexError halfway through the walk and produced a wrong-but-
+    # plausible NM for reads that happened to be long enough.
+    r_span = 0
+    for _n, _op in ops:
+        if _op in ('M', 'D', 'N', '=', 'X'):
+            r_span += int(_n)
+    if len(ref_seq) != r_span:
+        raise ValueError(
+            "nm_from_cigar: reference length %d != CIGAR reference span %d "
+            "for CIGAR %r; ref_seq must cover exactly the aligned region"
+            % (len(ref_seq), r_span, cigar_string))
 
     nm = 0
     q_pos = 0

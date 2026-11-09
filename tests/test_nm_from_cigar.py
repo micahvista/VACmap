@@ -78,6 +78,22 @@ def test_slice_passes_with_inner_cigar():
     assert nm_from_cigar('5M', 'GGGCC', 'GGGCC') == 0
 
 
+def test_ref_length_mismatch_raises():
+    """ref_seq must cover exactly the aligned region.
+
+    A shorter slice used to raise a bare IndexError mid-walk (silently dropped
+    read); a *longer* one silently shifted nothing but hid caller bugs.
+    """
+    import pytest
+    with pytest.raises(ValueError):
+        nm_from_cigar('5M', 'ACGTA', 'ACGT')          # ref too short
+    with pytest.raises(ValueError):
+        nm_from_cigar('5M', 'ACGTA', 'ACGTACC')       # ref too long
+    # deletion consumes reference without consuming query
+    with pytest.raises(ValueError):
+        nm_from_cigar('3M1D3M', 'ACGGTA', 'ACGGTA')   # needs 7 ref bases
+
+
 def test_leading_softclip_full_read_equals_slice_value():
     """The only correct value is obtained from the full read."""
     # 3S5M2S, one mismatch inside the aligned block
