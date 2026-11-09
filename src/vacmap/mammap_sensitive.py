@@ -18718,6 +18718,52 @@ def get_MD_CSlong(info, target, query):
         mdstring += str(equal_value)
     return mdstring, csstring
 @njit
+def expand_M_ops(info, target, query):
+    """Expand 'M' runs into '='/ 'X' runs by base comparison.
+
+    get_MD_CSshort/get_MD_CSlong only understand '=', 'X', 'D' and 'I'.  A
+    CIGAR that uses 'M' (VACmap's default unless eqx is enabled) fell into
+    their `else: return '', ''` branch, so every alignment shipped an empty
+    MD:Z / cs:Z tag.  Expanding here keeps one MD implementation and leaves
+    the CIGAR handed to the caller untouched.
+    """
+    out = []
+    refloc = 0
+    readloc = 0
+    for iloc in range(1, len(info), 2):
+        op = info[iloc]
+        value = string2int(info[iloc - 1])
+        if(op == 'M'):
+            run = 0
+            runop = ''
+            for jloc in range(value):
+                cur = '='
+                if(target[refloc + jloc] != query[readloc + jloc]):
+                    cur = 'X'
+                if(cur == runop):
+                    run += 1
+                else:
+                    if(run > 0):
+                        out.append(str(run))
+                        out.append(runop)
+                    run = 1
+                    runop = cur
+            if(run > 0):
+                out.append(str(run))
+                out.append(runop)
+            refloc += value
+            readloc += value
+        else:
+            out.append(info[iloc - 1])
+            out.append(op)
+            if(op == '=' or op == 'X' or op == 'D'):
+                refloc += value
+            if(op == '=' or op == 'X' or op == 'I'):
+                readloc += value
+    return out
+
+
+@njit
 def mergecigar_md_(cigarstring, target, query, shortcs = True):
 
     numberrange = (ord('0'), ord('9'))
@@ -18742,10 +18788,11 @@ def mergecigar_md_(cigarstring, target, query, shortcs = True):
                 preop = ch
                 num = 0
 
+    oplist_md = expand_M_ops(oplist, target, query)
     if(shortcs == True):
-        mdstring, csstring = get_MD_CSshort(oplist, target, query)
+        mdstring, csstring = get_MD_CSshort(oplist_md, target, query)
     else:
-        mdstring, csstring = get_MD_CSlong(oplist, target, query)
+        mdstring, csstring = get_MD_CSlong(oplist_md, target, query)
     return oplist, mdstring, csstring
 
 def mergecigar_md_cs(cigarstring, target, query, shortcs = True):  
