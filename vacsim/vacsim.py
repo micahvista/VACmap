@@ -21,8 +21,6 @@ import pandas as pd
 import sys
 import pysam
 
-def chioce_contig(contig_list, contigprob_list):
-    return np.random.choice(contig_list, p = contigprob_list)
 def prepare_usable_loc_info(contig2seq):
     contig_list = []
     contigprob_list = []
@@ -90,37 +88,6 @@ def insert(from_seq, from_start, from_end, reverse, times):
     else:
         return str(Seq(from_seq[from_start: from_end]).reverse_complement())*times     
         
-def decode_sim_sv_info(sim_sv_info):
-    contig_1, contig_2 = 'unkown', 'unkown'
-    match = 200
-    svstart_1, svstart_2 = match, match
-    times = int(sim_sv_info.split(',')[-1])
-    sim_sv_info = sim_sv_info.split(',')[:-1]
-    sv_list = []
-    for i in range(times):
-        for op in sim_sv_info:
-            svtype = op.split(':')[0]
-            svlen = np.random.randint(int(op.split(':')[1]), int(op.split(':')[2]))
-            if(svtype == 'DEL'):#DEL:contig:st:end
-                sv_list.append([svtype, contig_1, svstart_1, svstart_1 + svlen])
-                svstart_1 += svlen
-            elif(svtype == 'INS'):#INS:contig:st:size
-                sv_list.append([svtype, contig_1, svstart_1, svlen])
-            elif(svtype == 'DUP'):#DUP:contig:st:end:reverse:times
-                reverse = int(op.split(':')[3])
-                dup_times = int(op.split(':')[4])
-                sv_list.append([svtype, contig_1, svstart_1, svstart_1 + svlen, reverse, dup_times])
-                svstart_1 += svlen
-            elif(svtype == 'INV'):#INV:contig:st:end
-                sv_list.append([svtype, contig_1, svstart_1, svstart_1 + svlen])
-                svstart_1 += svlen
-            elif('TRA'):#TRA:contig:st:end:contig:st:end:reverse
-                reverse = int(op.split(':')[3])
-                sv_list.append([svtype, contig_1, svstart_1, svstart_1 + svlen, contig_2, svstart_2, svstart_2 + svlen, reverse])
-                svstart_1 += svlen
-                svstart_2 += svlen + match
-            svstart_1 += match
-    return svstart_1, svstart_2, sv_list
 def add_SV(contig_1, contig_2, refstart_1, refstart_2, oneinfo, contig2seq, unique_id):
     if(oneinfo[0] == 'DEL'):
         return [[contig_1, refstart_1+oneinfo[2], refstart_1+oneinfo[3], '', 'DEL', unique_id, ['DEL', contig_1, refstart_1+oneinfo[2], refstart_1+oneinfo[3]]]]
@@ -165,45 +132,6 @@ def get_start_loc(svspan_1, svspan_2, contig_list, contigprob_list, contig2usabl
             continue
         refstart_1 = np.random.randint(item[0][0] + edge_size, item[0][1] - svspan_1 - edge_size)
         item_1 = item
-
-        item = contig2usable_interval[contig_2].popitem()
-        if(((item[0][1] - item[0][0]) - 100) < svspan_2):
-            contig2usable_interval[contig_2][item[0]] = item[1]
-            continue
-        if(item[0][0] + edge_size >= item[0][1] - svspan_2 - edge_size):
-            continue
-        refstart_2 = np.random.randint(item[0][0] + edge_size, item[0][1] - svspan_2 - edge_size)
-        item_2 = item
-        pass_flag = True
-        
-        contig2usable_interval[contig_1][(item_1[0][0], refstart_1)] = 1 / (refstart_1 - item_1[0][0])
-        contig2usable_interval[contig_1][(refstart_1 + svspan_1, item_1[0][1])] = 1 / (item_1[0][1] - refstart_1 - svspan_1)
-        
-        contig2usable_interval[contig_2][(item_2[0][0], refstart_2)] = 1 / (refstart_2 - item_2[0][0])
-        contig2usable_interval[contig_2][(refstart_2 + svspan_2, item_2[0][1])] = 1 / (item_2[0][1] - refstart_2 - svspan_2)
-        return pass_flag, contig_1, refstart_1, contig_2, refstart_2
-def get_start_loc(svspan_1, svspan_2, contig_list, contigprob_list, contig2usable_interval):
-    edge_size = 200
-    pass_flag = False
-    count = 0
-    while(True):
-        count += 1
-        if(count > 50):
-            return pass_flag, '-1', -1, '-1', -1
-        while(True):
-            contig_1 = chioce_contig(contig_list, contigprob_list)
-            contig_2 = chioce_contig(contig_list, contigprob_list)
-            if((svspan_2 == 0) or (contig_1 != contig_2)):
-                break
-
-        item = contig2usable_interval[contig_1].popitem()
-        if(((item[0][1] - item[0][0]) - 2*edge_size) < svspan_1):
-            contig2usable_interval[contig_1][item[0]] = item[1]
-            continue
-        if(item[0][0] + edge_size >= item[0][1] - svspan_1 - edge_size):
-            continue
-        refstart_1 = np.random.randint(item[0][0] + edge_size, item[0][1] - svspan_1 - edge_size)
-        item_1 = item
         
         if(svspan_2 == 0):
             pass_flag = True
@@ -213,7 +141,6 @@ def get_start_loc(svspan_1, svspan_2, contig_list, contigprob_list, contig2usabl
             return pass_flag, contig_1, refstart_1, contig_1, refstart_1
             
             
-
         item = contig2usable_interval[contig_2].popitem()
         if(((item[0][1] - item[0][0]) - 100) < svspan_2):
             contig2usable_interval[contig_2][item[0]] = item[1]
@@ -234,14 +161,6 @@ def get_start_loc(svspan_1, svspan_2, contig_list, contigprob_list, contig2usabl
 def create_sim_sv_info_list(simulate_info_text):
     sim_sv_info_list = []
     for line in simulate_info_text.split('\n'):
-        times = int(line.split('\t')[1])
-        svstyle = line.split('\t')[0]
-        for i in range(times):
-            sim_sv_info_list.append(svstyle)
-    return sim_sv_info_list
-def create_sim_sv_info_list(simulate_info_text):
-    sim_sv_info_list = []
-    for line in simulate_info_text.split('\n'):
         if(line == ''):
             continue
         times = int(line.split('\t')[1])
@@ -253,30 +172,6 @@ def getfirst_python(x):
     return x[0]
 def getsecond_python(x):
     return x[1]
-def random_create_sim_sv_info_list(eventlist = ['DEL', 'INS', 'INV', 'DUP'], sizerange = [100, 1000], eventmaxcount = 20, svcount = 20000):
-    sim_sv_info_list = []
-    lenstring = ':'+str(sizerange[0])+':'+str(sizerange[1])
-    for line in range(svcount):
-        eventcount = np.random.randint(1, max(eventmaxcount, 2))
-        simulatedevent = 0
-        svstyle = ''
-        while(simulatedevent < eventcount):
-            simevent = np.random.choice(eventlist)
-            if(simevent in ('DEL', 'INS', 'INV')):
-                svstyle += simevent + lenstring + ','
-                simulatedevent += 1
-            elif(simevent == 'DUP'):
-                repeat = 1
-                #repeat = np.random.randint(1, eventcount - simulatedevent + 1)
-                simulatedevent += repeat
-                svstyle += simevent+lenstring+':0:'+str(repeat)+','
-            elif(simevent == 'TRA'):
-                simulatedevent += 1
-                reverse = str(np.random.randint(0, 1))
-                svstyle += simevent + lenstring +':'+ reverse  + ','
-                
-        sim_sv_info_list.append(svstyle+'1')
-    return sim_sv_info_list
 def count_event(decoded_info):
     eventcount = 0
     for line in decoded_info[-1]:
@@ -326,7 +221,6 @@ def decode_sim_sv_info(sim_sv_info):
     return svstart_1, svstart_2, sv_list
 def get23_python(x):
     return x[1], x[2]
-import pandas as pd
 def tovcf(svlist, contig2length, outputpath):
     top = """##fileformat=VCFv4.2
 ##FILTER=<ID=PASS,Description="All filters passed">\n"""
