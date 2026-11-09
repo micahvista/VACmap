@@ -315,12 +315,32 @@ def nm_from_cigar(cigar_string, query_seq, ref_seq):
     Returns:
         int: NM value >= 0
     """
+    # Guard (2026-11-09): the CIGAR must be in the same coordinate frame as
+    # query_seq.  A full-read CIGAR (leading nS) paired with an inner slice
+    # used to raise a bare IndexError deep in this loop, which the caller's
+    # "except Exception: continue" turned into a silently dropped read.
+    # Raise a diagnosable error instead of an opaque IndexError.
+    ops = _CIGAR_RE.findall(cigar_string)
+    q_consumed = 0
+    q_soft = 0
+    for _n, _op in ops:
+        if _op in ('M', 'I', '=', 'X'):
+            q_consumed += int(_n)
+        elif _op == 'S':
+            q_soft += int(_n)
+    if len(query_seq) != q_consumed + q_soft:
+        raise ValueError(
+            "nm_from_cigar: query length %d != CIGAR span %d (aligned %d + "
+            "soft-clipped %d) for CIGAR %r; pass the FULL read when the CIGAR "
+            "contains soft clips" % (len(query_seq), q_consumed + q_soft,
+                                     q_consumed, q_soft, cigar_string))
+
     nm = 0
     q_pos = 0
     r_pos = 0
-    for m in _CIGAR_RE.finditer(cigar_string):
-        length = int(m.group(1))
-        op = m.group(2)
+    for m in ops:
+        length = int(m[0])
+        op = m[1]
         if op == 'M':
             for i in range(length):
                 if query_seq[q_pos + i].upper() != ref_seq[r_pos + i].upper():

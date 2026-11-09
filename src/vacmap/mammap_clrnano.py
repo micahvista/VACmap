@@ -16914,7 +16914,7 @@ def get_bam_dict_str_comments(mapinfo, query, qual, comments, contig2iloc, conti
                 tmp_query = rc_query[item[3]: item[4]]
                 tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
             cigarstring, mdstring, csstring, n_cigar = mergecigar_md_cs(item[-1], tmp_target, tmp_query, shortcs)
-            nm = nm_from_cigar(cigarstring, tmp_query, tmp_target)
+            nm = nm_from_cigar(cigarstring, query if item[2] == '+' else rc_query, tmp_target)
             item[-1] = cigarstring
             iloc2nm[tmpiloc] = nm
             iloc2md[tmpiloc] = mdstring
@@ -20904,7 +20904,7 @@ def get_bam_dict_str(mapinfo, query, qual, contig2iloc, contig2seq, md, shortcs,
                 tmp_query = rc_query[item[3]: item[4]]
                 tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
             cigarstring, mdstring, csstring, n_cigar = mergecigar_md_cs(item[-1], tmp_target, tmp_query, shortcs)
-            nm = nm_from_cigar(cigarstring, tmp_query, tmp_target)
+            nm = nm_from_cigar(cigarstring, query if item[2] == '+' else rc_query, tmp_target)
             item[-1] = cigarstring
             iloc2nm[tmpiloc] = nm
             iloc2md[tmpiloc] = mdstring
@@ -21085,7 +21085,7 @@ def get_bam_dict_str_comments(mapinfo, query, qual, comments, contig2iloc, conti
                 tmp_query = rc_query[item[3]: item[4]]
                 tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
             cigarstring, mdstring, csstring, n_cigar = mergecigar_md_cs(item[-1], tmp_target, tmp_query, shortcs)
-            nm = nm_from_cigar(cigarstring, tmp_query, tmp_target)
+            nm = nm_from_cigar(cigarstring, query if item[2] == '+' else rc_query, tmp_target)
             item[-1] = cigarstring
             iloc2nm[tmpiloc] = nm
             iloc2md[tmpiloc] = mdstring
@@ -24107,15 +24107,18 @@ def get_list_of_readmap_stdout(raw_queue, cooked_queue, minimap, contig2seq, has
     rt_list = []
 
 
+    n_in = n_nomap = n_dperr = n_outerr = 0
     while(True):
         readidandseq = raw_queue.get()
         if(type(readidandseq) == int):
             break
 
 
+        n_in += 1
         try:
             onemapinfolist, (alignment_list,raw_alignment_list), TRA_signal, f_redo_ratio = get_readmap_DP_test(readidandseq[0], readidandseq[1], contig2start, contig2seq, minimap, index2contig, option, hastra = False, redo_ratio = redo_ratio, eqx = option['eqx'], check_num = option['c'])
         except Exception as error:
+            n_dperr += 1
 
             if(option['debug'] == True):
                 logging.error(error)
@@ -24129,16 +24132,20 @@ def get_list_of_readmap_stdout(raw_queue, cooked_queue, minimap, contig2seq, has
 
 
 
+        if(len(onemapinfolist) == 0):
+            n_nomap += 1
         if(len(onemapinfolist) != 0):
             try:
                 tmp_a_list = get_bam_dict_str(onemapinfolist, readidandseq[1], readidandseq[2], contig2iloc, contig2seq, option['md'], option['shortcs'], option['cigar2cg'], option['markunbalancetra'], option)
             except Exception as error:
+                n_outerr += 1
                 if(option['debug'] == True):
                     logging.info(error)
                     logging.info(readidandseq[0])
                     logging.info(readidandseq[1])
                 continue
             if((tmp_a_list) == None):
+                n_outerr += 1
                 continue
             else:
                 for a_line in tmp_a_list:
@@ -24150,6 +24157,8 @@ def get_list_of_readmap_stdout(raw_queue, cooked_queue, minimap, contig2seq, has
                     a_chars = 0
                 else:
                     continue
+    if(n_in > 0 and (n_nomap > 0 or n_dperr > 0 or n_outerr > 0)):
+        logging.info("[AUDIT] mode-H output worker: input_reads=%d no_alignment=%d dp_error=%d output_error=%d emitted=%d" % (n_in, n_nomap, n_dperr, n_outerr, n_in - n_nomap - n_dperr - n_outerr))
     if(len(a_list) > 0):
         cooked_queue.put(a_list)
         

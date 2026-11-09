@@ -5469,7 +5469,7 @@ def get_bam_dict_str(mapinfo, query, qual, contig2iloc, contig2seq, md, shortcs,
                 tmp_query = rc_query[item[3]: item[4]]
                 tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
             cigarstring, mdstring, csstring, n_cigar = mergecigar_md_cs(item[-1], tmp_target, tmp_query, shortcs)
-            nm = nm_from_cigar(cigarstring, tmp_query, tmp_target)
+            nm = nm_from_cigar(cigarstring, query if item[2] == '+' else rc_query, tmp_target)
             item[-1] = cigarstring
             iloc2nm[tmpiloc] = nm
             iloc2md[tmpiloc] = mdstring
@@ -11818,7 +11818,7 @@ def get_bam_dict_str(mapinfo, query, qual, contig2iloc, contig2seq, md, shortcs,
                 tmp_query = rc_query[item[3]: item[4]]
                 tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
             cigarstring, mdstring, csstring, n_cigar = mergecigar_md_cs(item[-1], tmp_target, tmp_query, shortcs)
-            nm = nm_from_cigar(cigarstring, tmp_query, tmp_target)
+            nm = nm_from_cigar(cigarstring, query if item[2] == '+' else rc_query, tmp_target)
             item[-1] = cigarstring
             iloc2nm[tmpiloc] = nm
             iloc2md[tmpiloc] = mdstring
@@ -15579,7 +15579,7 @@ def get_bam_dict_str(mapinfo, query, qual, contig2iloc, contig2seq, md, shortcs,
                 tmp_query = rc_query[item[3]: item[4]]
                 tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
             cigarstring, mdstring, csstring, n_cigar = mergecigar_md_cs(item[-1], tmp_target, tmp_query, shortcs)
-            nm = nm_from_cigar(cigarstring, tmp_query, tmp_target)
+            nm = nm_from_cigar(cigarstring, query if item[2] == '+' else rc_query, tmp_target)
             item[-1] = cigarstring
             iloc2nm[tmpiloc] = nm
             iloc2md[tmpiloc] = mdstring
@@ -17291,7 +17291,7 @@ def get_bam_dict_str_comments(mapinfo, query, qual, comments, contig2iloc, conti
                 tmp_query = rc_query[item[3]: item[4]]
                 tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
             cigarstring, mdstring, csstring, n_cigar = mergecigar_md_cs(item[-1], tmp_target, tmp_query, shortcs)
-            nm = nm_from_cigar(cigarstring, tmp_query, tmp_target)
+            nm = nm_from_cigar(cigarstring, query if item[2] == '+' else rc_query, tmp_target)
             item[-1] = cigarstring
             iloc2nm[tmpiloc] = nm
             iloc2md[tmpiloc] = mdstring
@@ -19780,7 +19780,7 @@ def get_bam_dict_str(mapinfo, query, qual, contig2iloc, contig2seq, md, shortcs,
                 tmp_query = rc_query[item[3]: item[4]]
                 tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
             cigarstring, mdstring, csstring, n_cigar = mergecigar_md_cs(item[-1], tmp_target, tmp_query, shortcs)
-            nm = nm_from_cigar(cigarstring, tmp_query, tmp_target)
+            nm = nm_from_cigar(cigarstring, query if item[2] == '+' else rc_query, tmp_target)
             item[-1] = cigarstring
             iloc2nm[tmpiloc] = nm
             iloc2md[tmpiloc] = mdstring
@@ -19924,7 +19924,7 @@ def get_bam_dict_str_comments(mapinfo, query, qual, comments, contig2iloc, conti
                 tmp_query = rc_query[item[3]: item[4]]
                 tmp_target = get_refseq(item[1], item[5], item[6], contig2seq)
             cigarstring, mdstring, csstring, n_cigar = mergecigar_md_cs(item[-1], tmp_target, tmp_query, shortcs)
-            nm = nm_from_cigar(cigarstring, tmp_query, tmp_target)
+            nm = nm_from_cigar(cigarstring, query if item[2] == '+' else rc_query, tmp_target)
             item[-1] = cigarstring
             iloc2nm[tmpiloc] = nm
             iloc2md[tmpiloc] = mdstring

@@ -59,3 +59,26 @@ def test_mixed_ops():
     query = 'ACGTAGGTA'
     ref   = 'ACGTGXGTA'
     assert nm_from_cigar('3M1I2M1D3M', query, ref) == 3
+
+
+def test_full_read_cigar_with_slice_raises():
+    """A full-read CIGAR (leading nS) needs the FULL read.
+
+    Passing only the aligned slice used to raise a bare IndexError that the
+    caller turned into a silently dropped read (issue #19).  It must now fail
+    loudly with a diagnosable ValueError.
+    """
+    import pytest
+    with pytest.raises(ValueError):
+        nm_from_cigar('3S5M2S', 'GGGCC', 'GGGCC')
+
+
+def test_slice_passes_with_inner_cigar():
+    """No S ops -> the aligned slice is a valid argument (documented contract)."""
+    assert nm_from_cigar('5M', 'GGGCC', 'GGGCC') == 0
+
+
+def test_leading_softclip_full_read_equals_slice_value():
+    """The only correct value is obtained from the full read."""
+    # 3S5M2S, one mismatch inside the aligned block
+    assert nm_from_cigar('3S5M2S', 'AAAGGGXCTT', 'GGGCC') == 1
