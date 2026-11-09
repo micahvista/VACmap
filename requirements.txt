@@ -1,12 +1,13 @@
 # Runtime dependencies of VACmap (Python 3.10).
-# Pinned to the set the test suite is verified against (2026-11-09: 51 passed
-# on a fresh py3.10 env).  conda users can keep using VACmap_environment.yml.
+# Pinned to the set the test suite is verified against (2026-11-09).
+# conda users can keep using VACmap_environment.yml.
 #
-# NOTE: cigar==0.1.3 ships only an sdist whose setup.py imports pkg_resources,
-# so install with build isolation disabled and setuptools<81 present:
-#     pip install --upgrade pip "setuptools<81" wheel
-#     pip install --no-build-isolation -r requirements.txt
-setuptools<81
+# The CIGAR arithmetic that used to come from the PyPI package `cigar` now
+# lives in src/vacmap/_cigar.py: cigar==0.1.3 publishes an sdist only and its
+# setup.py downloads setuptools 2.0.1 from a URL that no longer serves it, so
+# `pip install cigar` fails on any current machine.  Plain `pip install -r
+# requirements.txt` is therefore enough - no setuptools pin, no
+# --no-build-isolation.
 vacmap-index==0.0.3
 numpy==2.2.6
 numba==0.63.1
@@ -16,7 +17,6 @@ biopython==1.86
 pandas==2.3.3
 matplotlib==3.10.9
 heapdict==1.0.1
-cigar==0.1.3
 psutil==7.2.1
 # mappy is only needed by vacsim/vacsim.py and index.py (not by the vacmap CLI
 # or the test suite); PyPI has no py3.10 wheel for 2.31 and its sdist is broken,

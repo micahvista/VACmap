@@ -33,7 +33,7 @@ import copy
 from Bio.Seq import Seq
 import re
 
-from cigar import Cigar
+from vacmap._cigar import Cigar
 from io import StringIO
 import multiprocessing
 import os
